@@ -1,0 +1,42 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Data
+data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node
+node_modules/
+.next/
+.vercel
+.turbo
+tsconfig.tsbuildinfo
+
+# Logs
+*.log
+
+# Test artifacts
+test*.png
+
+# Playwright MCP
+.playwright-mcp/
+.mcp.json
+
+# OS
+.DS_Store
