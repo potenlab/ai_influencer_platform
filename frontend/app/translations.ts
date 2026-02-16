@@ -99,6 +99,34 @@ const translations: Record<Locale, Record<string, string>> = {
     noMedia: '생성된 미디어가 없습니다',
     jobGenerating: '생성 중...',
     jobFailedShort: '생성 실패',
+
+    // Header / Nav
+    appTitle: 'AI 인플루언서 스튜디오',
+    appTitleShort: 'AI 스튜디오',
+    stepCharacters: '캐릭터',
+    stepGenerate: '생성',
+    stepHistory: '히스토리',
+    logout: '로그아웃',
+    admin: '관리자',
+
+    // Spicy mode
+    spicyOn: 'Spicy',
+    spicyOff: 'Mild',
+    spicyTitleOn: 'Spicy ON (Grok Image)',
+    spicyTitleOff: 'Spicy OFF (Nano Banana Pro)',
+
+    // Duration info
+    durationInfo: '* 영상 길이(5~15초)는 AI가 프롬프트를 분석하여 자동 결정합니다.',
+
+    // History detail labels
+    labelPrompt: '프롬프트',
+    labelVideoPrompt: '비디오 프롬프트',
+    labelFirstFrame: '첫 프레임',
+    labelTheme: '테마',
+    labelHook: '훅',
+    labelFirstFramePrompt: '첫 프레임 프롬프트',
+    labelVideoFlow: '비디오 플로우',
+    labelCta: 'CTA',
   },
 
   en: {
@@ -199,6 +227,34 @@ const translations: Record<Locale, Record<string, string>> = {
     noMedia: 'No generated media',
     jobGenerating: 'Generating...',
     jobFailedShort: 'Generation failed',
+
+    // Header / Nav
+    appTitle: 'AI Influencer Studio',
+    appTitleShort: 'AI Studio',
+    stepCharacters: 'Characters',
+    stepGenerate: 'Generate',
+    stepHistory: 'History',
+    logout: 'Logout',
+    admin: 'Admin',
+
+    // Spicy mode
+    spicyOn: 'Spicy',
+    spicyOff: 'Mild',
+    spicyTitleOn: 'Spicy ON (Grok Image)',
+    spicyTitleOff: 'Spicy OFF (Nano Banana Pro)',
+
+    // Duration info
+    durationInfo: '* Duration (5-15s) is automatically determined by AI based on the prompt.',
+
+    // History detail labels
+    labelPrompt: 'PROMPT',
+    labelVideoPrompt: 'VIDEO PROMPT',
+    labelFirstFrame: 'FIRST FRAME',
+    labelTheme: 'THEME',
+    labelHook: 'HOOK',
+    labelFirstFramePrompt: 'FIRST FRAME PROMPT',
+    labelVideoFlow: 'VIDEO FLOW',
+    labelCta: 'CTA',
   },
 };
 

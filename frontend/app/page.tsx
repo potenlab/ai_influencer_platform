@@ -685,16 +685,16 @@ export default function Home() {
             className="text-sm sm:text-lg font-bold tracking-tight shrink-0"
             style={{ color: 'var(--accent-light)' }}
           >
-            <span className="hidden sm:inline">AI Influencer Studio</span>
-            <span className="sm:hidden">AI Studio</span>
+            <span className="hidden sm:inline">{t('appTitle')}</span>
+            <span className="sm:hidden">{t('appTitleShort')}</span>
           </h1>
 
           {/* Step indicator — 3 steps */}
           <nav className="flex items-center gap-0.5 sm:gap-1">
             {[
-              { key: 'characters' as Step, label: 'Characters', num: 1 },
-              { key: 'generate' as Step, label: 'Generate', num: 2 },
-              { key: 'history' as Step, label: 'History', num: 3 },
+              { key: 'characters' as Step, label: t('stepCharacters'), num: 1 },
+              { key: 'generate' as Step, label: t('stepGenerate'), num: 2 },
+              { key: 'history' as Step, label: t('stepHistory'), num: 3 },
             ].map((s, i) => {
               const isActive = currentStep === s.key;
               const isAccessible =
@@ -749,10 +749,10 @@ export default function Home() {
                 color: spicyMode ? '#ff4500' : 'var(--text-muted)',
                 background: spicyMode ? 'rgba(255,69,0,0.15)' : 'transparent',
               }}
-              title={spicyMode ? 'Spicy ON (Grok Image)' : 'Spicy OFF (Nano Banana Pro)'}
+              title={spicyMode ? t('spicyTitleOn') : t('spicyTitleOff')}
             >
               <span className="text-base">&#x1F336;&#xFE0F;</span>
-              <span className="hidden sm:inline">{spicyMode ? 'Spicy' : 'Mild'}</span>
+              <span className="hidden sm:inline">{spicyMode ? t('spicyOn') : t('spicyOff')}</span>
             </button>
             <span className="hidden sm:inline" style={{ color: 'var(--text-muted)' }}>|</span>
             <button
@@ -770,7 +770,7 @@ export default function Home() {
                   className="px-1.5 sm:px-2 py-1 rounded transition-all"
                   style={{ color: 'var(--text-muted)' }}
                 >
-                  <span className="hidden sm:inline">Admin</span>
+                  <span className="hidden sm:inline">{t('admin')}</span>
                   <span className="sm:hidden text-base">&#9881;</span>
                 </button>
               </>
@@ -781,7 +781,7 @@ export default function Home() {
               className="px-1.5 sm:px-2 py-1 rounded transition-all"
               style={{ color: '#ff6b6b' }}
             >
-              <span className="hidden sm:inline">{locale === 'ko' ? '로그아웃' : 'Logout'}</span>
+              <span className="hidden sm:inline">{t('logout')}</span>
               <span className="sm:hidden text-base">&#x2190;</span>
             </button>
           </div>
@@ -1435,9 +1435,7 @@ export default function Home() {
 
                         {/* Duration info */}
                         <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                          {locale === 'ko'
-                            ? '* 영상 길이(5~15초)는 AI가 프롬프트를 분석하여 자동 결정합니다.'
-                            : '* Duration (5-15s) is automatically determined by AI based on the prompt.'}
+                          {t('durationInfo')}
                         </p>
 
                         {/* Finalize button */}
@@ -2004,7 +2002,7 @@ export default function Home() {
                       {/* Show prompt (v2) or plan details (legacy) */}
                       {historyDetail.prompt && (
                         <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>PROMPT</span>
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelPrompt')}</span>
                           <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
                             {historyDetail.prompt}
                           </p>
@@ -2012,7 +2010,7 @@ export default function Home() {
                       )}
                       {historyDetail.video_prompt && (
                         <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>VIDEO PROMPT</span>
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoPrompt')}</span>
                           <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
                             {historyDetail.video_prompt}
                           </p>
@@ -2020,7 +2018,7 @@ export default function Home() {
                       )}
                       {historyDetail.first_frame_path && (
                         <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>FIRST FRAME</span>
+                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFrame')}</span>
                           <img
                             src={`${API}${historyDetail.first_frame_path}`}
                             alt="First frame"
@@ -2035,7 +2033,7 @@ export default function Home() {
                         <>
                           {historyDetail.plan_theme && (
                             <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>THEME</span>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelTheme')}</span>
                               <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
                                 {historyDetail.plan_theme}
                               </p>
@@ -2043,7 +2041,7 @@ export default function Home() {
                           )}
                           {historyDetail.hook && (
                             <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>HOOK</span>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelHook')}</span>
                               <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                                 {historyDetail.hook}
                               </p>
@@ -2051,7 +2049,7 @@ export default function Home() {
                           )}
                           {historyDetail.plan_first_frame_prompt && (
                             <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>FIRST FRAME PROMPT</span>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFramePrompt')}</span>
                               <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
                                 {historyDetail.plan_first_frame_prompt}
                               </p>
@@ -2059,7 +2057,7 @@ export default function Home() {
                           )}
                           {historyDetail.plan_video_prompt && (
                             <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>VIDEO FLOW</span>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoFlow')}</span>
                               <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
                                 {historyDetail.plan_video_prompt}
                               </p>
@@ -2067,7 +2065,7 @@ export default function Home() {
                           )}
                           {historyDetail.call_to_action && (
                             <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>CTA</span>
+                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelCta')}</span>
                               <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
                                 {historyDetail.call_to_action}
                               </p>
