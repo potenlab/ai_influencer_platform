@@ -1,4 +1,5 @@
 import { fal } from '@fal-ai/client';
+import { describeImageForPrompt } from './openrouter';
 
 let _configured = false;
 function ensureConfig() {
@@ -75,11 +76,18 @@ export async function generateSceneImage(
   imageUrls: string[],
   spicy = false
 ): Promise<string> {
-  // Spicy + 참고이미지 없음 (ID사진 1장만) → xAI edit
-  // Spicy + 참고이미지 있음 (2장 이상) → nano-banana-pro/edit (참고이미지 반영 위해)
-  if (spicy && imageUrls.length <= 1) {
+  if (spicy) {
+    // Spicy: 전부 xAI로 처리
+    if (imageUrls.length > 1) {
+      // 참고이미지 있음 → LLM으로 참고이미지 설명 → 프롬프트에 합침 → xAI edit (ID사진)
+      const refDescription = await describeImageForPrompt(imageUrls[1]);
+      const enrichedPrompt = `${prompt}\n\nReference style: ${refDescription}`;
+      return xaiImageEdit(enrichedPrompt, imageUrls[0]);
+    }
+    // ID사진만 → xAI edit
     return xaiImageEdit(prompt, imageUrls[0]);
   }
+  // Mild: fal.ai nano-banana-pro
   ensureConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {

@@ -22,6 +22,53 @@ async function chatCompletion(
   return data.choices[0].message.content || '';
 }
 
+async function visionChatCompletion(
+  imageUrl: string,
+  textPrompt: string,
+  temperature: number = 0.5
+): Promise<string> {
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model: getModel(),
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: imageUrl } },
+            { type: 'text', text: textPrompt },
+          ],
+        },
+      ],
+      temperature,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`OpenRouter vision error ${res.status}: ${err}`);
+  }
+  const data = await res.json();
+  return data.choices[0].message.content || '';
+}
+
+export async function describeImageForPrompt(imageUrl: string): Promise<string> {
+  return visionChatCompletion(
+    imageUrl,
+    `Describe this image in detail for use as an AI image generation prompt. Focus on:
+- Scene composition, setting, background
+- Pose, body position, camera angle
+- Lighting, mood, color palette
+- Clothing, accessories, styling
+- Any notable visual elements
+
+Return ONLY the descriptive text, no explanations or prefixes. Keep it under 200 words.`
+  );
+}
+
 function extractJson(content: string): any {
   const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (match) content = match[1];
