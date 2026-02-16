@@ -14,12 +14,20 @@ async function chatCompletion(
     },
     body: JSON.stringify({ model: getModel(), messages, temperature }),
   });
+  const rawText = await res.text();
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter error ${res.status}: ${err}`);
+    throw new Error(`OpenRouter error ${res.status}: ${rawText}`);
   }
-  const data = await res.json();
-  return data.choices[0].message.content || '';
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`OpenRouter returned non-JSON: ${rawText.slice(0, 200)}`);
+  }
+  if (data.error) {
+    throw new Error(`OpenRouter API error: ${JSON.stringify(data.error)}`);
+  }
+  return data.choices?.[0]?.message?.content || '';
 }
 
 async function visionChatCompletion(
@@ -47,12 +55,20 @@ async function visionChatCompletion(
       temperature,
     }),
   });
+  const rawText = await res.text();
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`OpenRouter vision error ${res.status}: ${err}`);
+    throw new Error(`OpenRouter vision error ${res.status}: ${rawText}`);
   }
-  const data = await res.json();
-  return data.choices[0].message.content || '';
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`OpenRouter vision returned non-JSON: ${rawText.slice(0, 200)}`);
+  }
+  if (data.error) {
+    throw new Error(`OpenRouter vision API error: ${JSON.stringify(data.error)}`);
+  }
+  return data.choices?.[0]?.message?.content || '';
 }
 
 export async function describeImageForPrompt(imageUrl: string): Promise<string> {
