@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const firstFramePath = await uploadMediaFromUrl(firstFrameUrl, 'images', 'png');
 
     // Generate video prompt via LLM
-    const videoPrompt = await generateVideoPrompt(character, concept);
+    const videoPrompt = await generateVideoPrompt(character, concept, !!spicy);
 
     const prepareId = crypto.randomUUID();
 
