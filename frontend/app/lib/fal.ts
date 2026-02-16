@@ -80,13 +80,8 @@ export async function generateCharacterImage(
     });
     const baseUrl = (baseResult as any).data.images[0].url;
     if (spicyEditPrompt) {
-      try {
-        console.log('[generateCharacterImage] spicy two-step: editing with grok-imagine-image-pro');
-        return await xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
-      } catch (e: any) {
-        console.warn('[generateCharacterImage] grok edit failed, using base image:', e.message);
-        return baseUrl;
-      }
+      console.log('[generateCharacterImage] spicy two-step: editing with grok-imagine-image-pro');
+      return xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
     }
     return baseUrl;
   }
@@ -131,13 +126,8 @@ export async function generateSceneImage(
 
     // Step 3: spicy edit prompt이 있으면 grok으로 사람 부분만 spicy하게 편집
     if (spicyEditPrompt) {
-      try {
-        console.log('[generateSceneImage] spicy two-step: editing with grok-imagine-image-pro');
-        return await xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
-      } catch (e: any) {
-        console.warn('[generateSceneImage] grok edit failed, using base image:', e.message);
-        return baseUrl;
-      }
+      console.log('[generateSceneImage] spicy two-step: editing with grok-imagine-image-pro');
+      return xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
     }
     return baseUrl;
   }
