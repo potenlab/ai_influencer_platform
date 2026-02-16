@@ -75,7 +75,9 @@ export async function generateSceneImage(
   imageUrls: string[],
   spicy = false
 ): Promise<string> {
-  if (spicy) {
+  // Spicy + 참고이미지 없음 (ID사진 1장만) → xAI edit
+  // Spicy + 참고이미지 있음 (2장 이상) → nano-banana-pro/edit (참고이미지 반영 위해)
+  if (spicy && imageUrls.length <= 1) {
     return xaiImageEdit(prompt, imageUrls[0]);
   }
   ensureConfig();
