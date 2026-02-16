@@ -115,7 +115,12 @@ export default function Home() {
   const [historyDetail, setHistoryDetail] = useState<HistoryMedia | null>(null);
 
   // Spicy mode (use xai/grok-imagine-image instead of nano-banana-pro)
-  const [spicyMode, setSpicyMode] = useState(false);
+  const [spicyMode, setSpicyMode] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('spicyMode') === 'true';
+    }
+    return false;
+  });
 
   // i18n
   const [locale, setLocale] = useState<Locale>('ko');
@@ -743,7 +748,7 @@ export default function Home() {
           {/* Spicy + Locale + Admin + Logout */}
           <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium shrink-0">
             <button
-              onClick={() => setSpicyMode(!spicyMode)}
+              onClick={() => { const next = !spicyMode; setSpicyMode(next); localStorage.setItem('spicyMode', String(next)); }}
               className="px-1.5 sm:px-2 py-1 rounded transition-all flex items-center gap-1"
               style={{
                 color: spicyMode ? '#ff4500' : 'var(--text-muted)',
