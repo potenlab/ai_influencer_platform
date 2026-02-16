@@ -14,9 +14,10 @@ export async function generateCharacterImage(
 ): Promise<string> {
   ensureConfig();
   const model = spicy ? 'xai/grok-imagine-image' : 'fal-ai/nano-banana-pro';
-  const result = await fal.run(model, {
-    input: { prompt, image_size: 'square_hd', num_images: 1 } as any,
-  });
+  const input = spicy
+    ? { prompt, aspect_ratio: '1:1', num_images: 1 }
+    : { prompt, image_size: 'square_hd', num_images: 1 };
+  const result = await fal.run(model, { input: input as any });
   return (result as any).data.images[0].url;
 }
 
@@ -27,15 +28,10 @@ export async function generateSceneImage(
 ): Promise<string> {
   ensureConfig();
   const model = spicy ? 'xai/grok-imagine-image/edit' : 'fal-ai/nano-banana-pro/edit';
-  const result = await fal.run(model as any, {
-    input: {
-      prompt,
-      image_urls: imageUrls,
-      num_images: 1,
-      aspect_ratio: '9:16',
-      resolution: '2K',
-    } as any,
-  });
+  const input = spicy
+    ? { prompt, image_url: imageUrls[0], num_images: 1 }
+    : { prompt, image_urls: imageUrls, num_images: 1, aspect_ratio: '9:16', resolution: '2K' };
+  const result = await fal.run(model as any, { input: input as any });
   return (result as any).data.images[0].url;
 }
 
