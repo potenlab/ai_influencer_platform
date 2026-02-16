@@ -55,18 +55,27 @@ async function xaiImageEdit(prompt: string, imageUrl: string): Promise<string> {
   return data.data[0].url;
 }
 
+// ── Realistic style suffix ──
+
+const REALISTIC_SUFFIX = ' — photorealistic style, ultra-realistic, natural skin texture, real photograph, studio-quality lighting';
+
+function withRealisticStyle(prompt: string): string {
+  return prompt + REALISTIC_SUFFIX;
+}
+
 // ── Public image generation functions ──
 
 export async function generateCharacterImage(
   prompt: string,
   spicy = false
 ): Promise<string> {
+  const styledPrompt = withRealisticStyle(prompt);
   if (spicy) {
-    return xaiImageGenerate(prompt, '1:1');
+    return xaiImageGenerate(styledPrompt, '1:1');
   }
   ensureConfig();
   const result = await fal.run('fal-ai/nano-banana-pro', {
-    input: { prompt, image_size: 'square_hd', num_images: 1 } as any,
+    input: { prompt: styledPrompt, image_size: 'square_hd', num_images: 1 } as any,
   });
   return (result as any).data.images[0].url;
 }
@@ -76,22 +85,23 @@ export async function generateSceneImage(
   imageUrls: string[],
   spicy = false
 ): Promise<string> {
+  const styledPrompt = withRealisticStyle(prompt);
   if (spicy) {
     // Spicy: 전부 xAI로 처리
     if (imageUrls.length > 1) {
       // 참고이미지 있음 → LLM으로 참고이미지 설명 → 프롬프트에 합침 → xAI edit (ID사진)
       const refDescription = await describeImageForPrompt(imageUrls[1]);
-      const enrichedPrompt = `${prompt}\n\nReference style: ${refDescription}`;
+      const enrichedPrompt = `${styledPrompt}\n\nReference style: ${refDescription}`;
       return xaiImageEdit(enrichedPrompt, imageUrls[0]);
     }
     // ID사진만 → xAI edit
-    return xaiImageEdit(prompt, imageUrls[0]);
+    return xaiImageEdit(styledPrompt, imageUrls[0]);
   }
   // Mild: fal.ai nano-banana-pro
   ensureConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {
-      prompt,
+      prompt: styledPrompt,
       image_urls: imageUrls,
       num_images: 1,
       aspect_ratio: '9:16',
