@@ -39,7 +39,9 @@ export async function POST(request: Request) {
     }
 
     // Generate scene image
+    console.log('[generate/image] spicy:', !!spicy, 'imageUrls:', imageUrls.length, 'option:', option);
     const resultUrl = await generateSceneImage(prompt, imageUrls, !!spicy);
+    console.log('[generate/image] resultUrl:', resultUrl?.slice(0, 100));
 
     // Upload to storage
     const publicUrl = await uploadMediaFromUrl(resultUrl, 'images', 'png');
