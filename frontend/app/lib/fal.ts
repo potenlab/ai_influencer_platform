@@ -1,5 +1,5 @@
 import { fal } from '@fal-ai/client';
-import { describeImageForPrompt } from './openrouter';
+import { describeImageForPrompt, generateSpicyPrompts } from './openrouter';
 
 let _configured = false;
 function ensureConfig() {
@@ -71,7 +71,19 @@ export async function generateCharacterImage(
 ): Promise<string> {
   const styledPrompt = withRealisticStyle(prompt);
   if (spicy) {
-    return xaiImageGenerate(styledPrompt, '1:1');
+    // Two-step: nano-banana-pro → grok edit
+    console.log('[generateCharacterImage] spicy two-step: generating safe base with nano-banana-pro');
+    const { safePrompt, spicyEditPrompt } = await generateSpicyPrompts(prompt);
+    ensureConfig();
+    const baseResult = await fal.run('fal-ai/nano-banana-pro', {
+      input: { prompt: withRealisticStyle(safePrompt), image_size: 'square_hd', num_images: 1 } as any,
+    });
+    const baseUrl = (baseResult as any).data.images[0].url;
+    if (spicyEditPrompt) {
+      console.log('[generateCharacterImage] spicy two-step: editing with grok-imagine-image-pro');
+      return xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
+    }
+    return baseUrl;
   }
   ensureConfig();
   const result = await fal.run('fal-ai/nano-banana-pro', {
@@ -85,19 +97,42 @@ export async function generateSceneImage(
   imageUrls: string[],
   spicy = false
 ): Promise<string> {
-  const styledPrompt = withRealisticStyle(prompt);
   if (spicy) {
-    // Spicy: 전부 xAI로 처리
+    // Two-step spicy: nano-banana-pro/edit → grok edit
+    // Step 0: 참고이미지 있으면 LLM으로 설명 추출
+    let refDescription: string | undefined;
     if (imageUrls.length > 1) {
-      // 참고이미지 있음 → LLM으로 참고이미지 설명 → 프롬프트에 합침 → xAI edit (ID사진)
-      const refDescription = await describeImageForPrompt(imageUrls[1]);
-      const enrichedPrompt = `${styledPrompt}\n\nReference style: ${refDescription}`;
-      return xaiImageEdit(enrichedPrompt, imageUrls[0]);
+      console.log('[generateSceneImage] spicy: describing reference image via LLM');
+      refDescription = await describeImageForPrompt(imageUrls[1]);
     }
-    // ID사진만 → xAI edit
-    return xaiImageEdit(styledPrompt, imageUrls[0]);
+
+    // Step 1: Kimi가 safe prompt + spicy edit prompt 생성
+    console.log('[generateSceneImage] spicy two-step: generating prompts via LLM');
+    const { safePrompt, spicyEditPrompt } = await generateSpicyPrompts(prompt, refDescription);
+
+    // Step 2: nano-banana-pro/edit로 safe 베이스 이미지 생성 (캐릭터 일관성 유지)
+    console.log('[generateSceneImage] spicy two-step: generating safe base with nano-banana-pro/edit');
+    ensureConfig();
+    const baseResult = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
+      input: {
+        prompt: withRealisticStyle(safePrompt),
+        image_urls: imageUrls,
+        num_images: 1,
+        aspect_ratio: '9:16',
+        resolution: '2K',
+      } as any,
+    });
+    const baseUrl = (baseResult as any).data.images[0].url;
+
+    // Step 3: spicy edit prompt이 있으면 grok으로 사람 부분만 spicy하게 편집
+    if (spicyEditPrompt) {
+      console.log('[generateSceneImage] spicy two-step: editing with grok-imagine-image-pro');
+      return xaiImageEdit(withRealisticStyle(spicyEditPrompt), baseUrl);
+    }
+    return baseUrl;
   }
   // Mild: fal.ai nano-banana-pro
+  const styledPrompt = withRealisticStyle(prompt);
   ensureConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {

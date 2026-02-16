@@ -197,6 +197,41 @@ Return ONLY the video prompt text, no JSON, no markdown.`;
   return content.trim();
 }
 
+export async function generateSpicyPrompts(
+  concept: string,
+  referenceImageDescription?: string
+): Promise<{ safePrompt: string; spicyEditPrompt: string | null }> {
+  const refContext = referenceImageDescription
+    ? `\nReference image description: ${referenceImageDescription}`
+    : '';
+
+  const prompt = `You are helping generate an AI image in TWO steps.
+Step 1: Generate a safe, high-quality base image using a standard model (good composition, character consistency, scene setting).
+Step 2: (Optional) Edit just the person in the image to make it bolder and more provocative using an uncensored model.
+
+User concept: ${concept}${refContext}
+
+Return a JSON object with exactly these fields:
+- "safePrompt": A detailed image generation prompt for Step 1. Focus on scene, pose, composition, lighting, clothing, setting. Keep it clean and professional but with the same concept. Do NOT include any provocative or suggestive elements.
+- "spicyEditPrompt": A prompt for Step 2 that tells the edit model how to transform the person to be bolder, more provocative, sexier. Focus ONLY on the person (pose, expression, clothing changes, body language). If the concept is already mild enough and doesn't need spicy editing, set this to null.
+
+Return only valid JSON, no markdown.`;
+
+  const content = await chatCompletion(
+    [
+      { role: 'system', content: 'You are an expert image prompt engineer. Always return valid JSON.' },
+      { role: 'user', content: prompt },
+    ],
+    0.8
+  );
+
+  const parsed = extractJson(content);
+  return {
+    safePrompt: parsed.safePrompt || parsed.safe_prompt || concept,
+    spicyEditPrompt: parsed.spicyEditPrompt || parsed.spicy_edit_prompt || null,
+  };
+}
+
 export async function determineVideoDuration(
   videoPrompt: string
 ): Promise<number> {
