@@ -1,19 +1,12 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { submitVideoToQueue } from '@/app/lib/fal';
+import { xaiSubmitVideo } from '@/app/lib/fal';
 import { determineVideoDuration } from '@/app/lib/openrouter';
 import { handleError } from '@/app/lib/api-utils';
 
 function genJobId(): string {
   return 'job_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
-}
-
-function getWebhookUrl(): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL || process.env.VERCEL_URL;
-  if (!base) throw new Error('NEXT_PUBLIC_SITE_URL or VERCEL_URL must be set for webhooks');
-  const origin = base.startsWith('http') ? base : `https://${base}`;
-  return `${origin}/api/webhooks/fal`;
 }
 
 export async function POST(request: Request) {
@@ -41,25 +34,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Character not found' }, { status: 404 });
     }
 
-    // Determine video duration via LLM (fast operation, within timeout)
+    // Determine video duration via LLM
     const duration = await determineVideoDuration(video_prompt);
 
     const jobId = genJobId();
-    const webhookUrl = getWebhookUrl();
-
-    const falModel = first_frame_path
-      ? 'xai/grok-imagine-video/image-to-video'
-      : 'xai/grok-imagine-video/text-to-video';
-
-    const falInput: Record<string, any> = {
-      prompt: video_prompt,
-      duration: Math.min(duration, 15),
-      aspect_ratio: '9:16',
-      resolution: '720p',
-    };
-    if (first_frame_path) {
-      falInput.image_url = first_frame_path;
-    }
 
     // Create job row
     await supabaseAdmin.from('jobs').insert({
@@ -71,14 +49,18 @@ export async function POST(request: Request) {
       input_data: { first_frame_path, video_prompt, concept, duration },
     });
 
-    // Submit to FAL queue (returns immediately)
-    const { request_id } = await submitVideoToQueue(falModel, falInput, webhookUrl);
+    // Submit to xAI directly (returns request_id)
+    const requestId = await xaiSubmitVideo(
+      video_prompt,
+      duration,
+      first_frame_path || undefined
+    );
 
-    // Update job with request_id
+    // Update job with xAI request_id
     await supabaseAdmin
       .from('jobs')
       .update({
-        fal_request_id: request_id,
+        fal_request_id: requestId,
         status: 'processing',
         updated_at: new Date().toISOString(),
       })

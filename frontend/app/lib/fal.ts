@@ -187,3 +187,54 @@ export async function submitVideoToQueue(
   });
   return { request_id: result.request_id };
 }
+
+// ── xAI direct video API ──
+
+export async function xaiSubmitVideo(
+  prompt: string,
+  duration: number,
+  imageUrl?: string
+): Promise<string> {
+  const body: Record<string, any> = {
+    model: 'grok-imagine-video',
+    prompt,
+    duration: Math.min(duration, 15),
+    aspect_ratio: '9:16',
+    resolution: '720p',
+  };
+  if (imageUrl) {
+    body.image = { url: imageUrl };
+  }
+
+  const res = await fetch('https://api.x.ai/v1/videos/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+    },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`xAI video submit error ${res.status}: ${JSON.stringify(err)}`);
+  }
+  const data = await res.json();
+  return data.request_id;
+}
+
+export async function xaiPollVideo(requestId: string): Promise<{ status: string; videoUrl?: string }> {
+  const res = await fetch(`https://api.x.ai/v1/videos/${requestId}`, {
+    headers: {
+      Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+    },
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`xAI video poll error ${res.status}: ${JSON.stringify(err)}`);
+  }
+  const data = await res.json();
+  if (data.status === 'done' && data.video?.url) {
+    return { status: 'done', videoUrl: data.video.url };
+  }
+  return { status: data.status || 'processing' };
+}
