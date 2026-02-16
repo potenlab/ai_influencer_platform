@@ -29,6 +29,27 @@ export async function GET(
       try {
         const poll = await xaiPollVideo(job.fal_request_id);
 
+        if (poll.status === 'failed') {
+          await supabaseAdmin
+            .from('jobs')
+            .update({
+              status: 'failed',
+              error_message: poll.error || 'Video generation failed',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', job.id);
+
+          return NextResponse.json({
+            id: job.id,
+            job_type: job.job_type,
+            status: 'failed',
+            result_data: null,
+            error_message: poll.error || 'Video generation failed',
+            created_at: job.created_at,
+            updated_at: new Date().toISOString(),
+          });
+        }
+
         if (poll.status === 'done' && poll.videoUrl) {
           // Upload video to Supabase Storage
           const videoPath = await uploadMediaFromUrl(poll.videoUrl, 'videos', 'mp4');

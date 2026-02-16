@@ -222,7 +222,7 @@ export async function xaiSubmitVideo(
   return data.request_id;
 }
 
-export async function xaiPollVideo(requestId: string): Promise<{ status: string; videoUrl?: string }> {
+export async function xaiPollVideo(requestId: string): Promise<{ status: string; videoUrl?: string; error?: string }> {
   const res = await fetch(`https://api.x.ai/v1/videos/${requestId}`, {
     headers: {
       Authorization: `Bearer ${process.env.XAI_API_KEY}`,
@@ -230,7 +230,8 @@ export async function xaiPollVideo(requestId: string): Promise<{ status: string;
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(`xAI video poll error ${res.status}: ${JSON.stringify(err)}`);
+    const errorMsg = err.error || err.message || `xAI error ${res.status}`;
+    return { status: 'failed', error: errorMsg };
   }
   const data = await res.json();
   // xAI returns video object directly when done (no status field)
