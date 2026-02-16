@@ -8,16 +8,65 @@ function ensureConfig() {
   }
 }
 
+// ── xAI direct API helpers (for spicy mode) ──
+
+async function xaiImageGenerate(prompt: string, aspectRatio = '1:1'): Promise<string> {
+  const res = await fetch('https://api.x.ai/v1/images/generations', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'grok-imagine-image-pro',
+      prompt,
+      n: 1,
+      aspect_ratio: aspectRatio,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`xAI image error ${res.status}: ${JSON.stringify(err)}`);
+  }
+  const data = await res.json();
+  return data.data[0].url;
+}
+
+async function xaiImageEdit(prompt: string, imageUrl: string): Promise<string> {
+  const res = await fetch('https://api.x.ai/v1/images/edits', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.XAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: 'grok-imagine-image-pro',
+      prompt,
+      image: { url: imageUrl, type: 'image_url' },
+      n: 1,
+    }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(`xAI image edit error ${res.status}: ${JSON.stringify(err)}`);
+  }
+  const data = await res.json();
+  return data.data[0].url;
+}
+
+// ── Public image generation functions ──
+
 export async function generateCharacterImage(
   prompt: string,
   spicy = false
 ): Promise<string> {
+  if (spicy) {
+    return xaiImageGenerate(prompt, '1:1');
+  }
   ensureConfig();
-  const model = spicy ? 'xai/grok-imagine-image' : 'fal-ai/nano-banana-pro';
-  const input = spicy
-    ? { prompt, aspect_ratio: '1:1', num_images: 1 }
-    : { prompt, image_size: 'square_hd', num_images: 1 };
-  const result = await fal.run(model, { input: input as any });
+  const result = await fal.run('fal-ai/nano-banana-pro', {
+    input: { prompt, image_size: 'square_hd', num_images: 1 } as any,
+  });
   return (result as any).data.images[0].url;
 }
 
@@ -26,12 +75,19 @@ export async function generateSceneImage(
   imageUrls: string[],
   spicy = false
 ): Promise<string> {
+  if (spicy) {
+    return xaiImageEdit(prompt, imageUrls[0]);
+  }
   ensureConfig();
-  const model = spicy ? 'xai/grok-imagine-image/edit' : 'fal-ai/nano-banana-pro/edit';
-  const input = spicy
-    ? { prompt, image_url: imageUrls[0], num_images: 1 }
-    : { prompt, image_urls: imageUrls, num_images: 1, aspect_ratio: '9:16', resolution: '2K' };
-  const result = await fal.run(model as any, { input: input as any });
+  const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
+    input: {
+      prompt,
+      image_urls: imageUrls,
+      num_images: 1,
+      aspect_ratio: '9:16',
+      resolution: '2K',
+    } as any,
+  });
   return (result as any).data.images[0].url;
 }
 
