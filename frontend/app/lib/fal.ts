@@ -233,7 +233,8 @@ export async function xaiPollVideo(requestId: string): Promise<{ status: string;
     throw new Error(`xAI video poll error ${res.status}: ${JSON.stringify(err)}`);
   }
   const data = await res.json();
-  if (data.status === 'done' && data.video?.url) {
+  // xAI returns video object directly when done (no status field)
+  if (data.video?.url) {
     return { status: 'done', videoUrl: data.video.url };
   }
   return { status: data.status || 'processing' };
