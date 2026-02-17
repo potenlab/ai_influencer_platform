@@ -124,6 +124,7 @@ export default function Home() {
 
   // Spicy mode toggles (per-feature)
   const [spicyCharacter, setSpicyCharacter] = useState(false);
+  const [spicyImage, setSpicyImage] = useState(false);
   const [spicyVideo, setSpicyVideo] = useState(false);
 
   // i18n
@@ -492,6 +493,7 @@ export default function Home() {
           prompt: prompt.trim(),
           option: imageOption,
           reference_image_path: refPath || undefined,
+          spicy: imageOption === 'text_only' ? spicyImage : false,
         }),
         signal: controller.signal,
       });
@@ -1348,6 +1350,26 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* Spicy toggle (text_only only) */}
+                {imageOption === 'text_only' && (
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <button
+                      type="button"
+                      onClick={() => setSpicyImage(!spicyImage)}
+                      className="w-9 h-5 rounded-full transition-all relative"
+                      style={{ background: spicyImage ? '#ff4500' : 'var(--border)' }}
+                    >
+                      <span
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                        style={{ left: spicyImage ? '18px' : '2px' }}
+                      />
+                    </button>
+                    <span className="text-xs" style={{ color: spicyImage ? '#ff4500' : 'var(--text-muted)' }}>
+                      &#x1F336;&#xFE0F; {spicyImage ? t('spicyOn') : t('spicyOff')}
+                    </span>
+                  </label>
+                )}
+
                 {/* Generate button */}
                 <button
                   onClick={generateImage}
@@ -1724,24 +1746,6 @@ export default function Home() {
                         )}
                       </div>
                     </div>
-
-                    {/* Spicy toggle for motion video */}
-                    <label className="flex items-center gap-2 cursor-pointer select-none">
-                      <button
-                        type="button"
-                        onClick={() => setSpicyVideo(!spicyVideo)}
-                        className="w-9 h-5 rounded-full transition-all relative"
-                        style={{ background: spicyVideo ? '#ff4500' : 'var(--border)' }}
-                      >
-                        <span
-                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
-                          style={{ left: spicyVideo ? '18px' : '2px' }}
-                        />
-                      </button>
-                      <span className="text-xs" style={{ color: spicyVideo ? '#ff4500' : 'var(--text-muted)' }}>
-                        &#x1F336;&#xFE0F; {spicyVideo ? t('spicyOn') : t('spicyOff')}
-                      </span>
-                    </label>
 
                     {/* Generate button */}
                     <button

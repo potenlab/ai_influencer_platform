@@ -1,5 +1,5 @@
 import { fal } from '@fal-ai/client';
-import { xaiImageGenerate } from './xai';
+import { xaiImageGenerate, xaiImageEdit } from './xai';
 
 let _falConfigured = false;
 function ensureFalConfig() {
@@ -30,8 +30,16 @@ export async function generateCharacterImage(prompt: string, spicy = false): Pro
 export async function generateSceneImage(
   prompt: string,
   imageUrls: string[],
+  spicy = false,
 ): Promise<string> {
   const styledPrompt = withRealisticStyle(prompt);
+
+  // Spicy (text_only, no reference image): xAI grok edit on character image
+  if (spicy && imageUrls.length === 1) {
+    return xaiImageEdit(styledPrompt, imageUrls[0]);
+  }
+
+  // Reference image or mild: always fal.ai nano-banana-pro/edit
   ensureFalConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {
