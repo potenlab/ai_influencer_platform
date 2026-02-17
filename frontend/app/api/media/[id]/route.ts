@@ -44,3 +44,36 @@ export async function PATCH(
     return handleError(error);
   }
 }
+
+export async function DELETE(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth(request);
+    const { id } = await params;
+
+    // Verify ownership
+    const { data: media, error: fetchError } = await supabaseAdmin
+      .from('media')
+      .select('id, file_path')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !media) {
+      return NextResponse.json({ error: 'Media not found' }, { status: 404 });
+    }
+
+    const { error: deleteError } = await supabaseAdmin
+      .from('media')
+      .delete()
+      .eq('id', id);
+
+    if (deleteError) throw new Error(deleteError.message);
+
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    return handleError(error);
+  }
+}

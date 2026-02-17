@@ -72,6 +72,9 @@ const translations: Record<Locale, Record<string, string>> = {
     noPortfolioImages: '포트폴리오 이미지가 없습니다. 먼저 이미지를 생성하세요.',
     addToPortfolio: '포트폴리오에 추가',
     removeFromPortfolio: '포트폴리오에서 제거',
+    deleteMedia: '삭제',
+    confirmDeleteMedia: '이 미디어를 삭제하시겠습니까?',
+    selectMotionImage: '캐릭터 이미지 선택',
     generateVideoPromptBtn: '비디오 프롬프트 생성',
 
     // Motion control
@@ -208,6 +211,9 @@ const translations: Record<Locale, Record<string, string>> = {
     noPortfolioImages: 'No portfolio images. Generate images first.',
     addToPortfolio: 'Add to Portfolio',
     removeFromPortfolio: 'Remove from Portfolio',
+    deleteMedia: 'Delete',
+    confirmDeleteMedia: 'Delete this media?',
+    selectMotionImage: 'Select Character Image',
     generateVideoPromptBtn: 'Generate Video Prompt',
 
     // Motion control

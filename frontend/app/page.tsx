@@ -101,6 +101,7 @@ export default function Home() {
   const [referenceImageFile, setReferenceImageFile] = useState<File | null>(null);
   const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const [drivingVideoFile, setDrivingVideoFile] = useState<File | null>(null);
+  const [selectedMotionImage, setSelectedMotionImage] = useState<string | null>(null);
 
   // Portfolio / first frame selection states
   const [portfolioImages, setPortfolioImages] = useState<HistoryMedia[]>([]);
@@ -335,6 +336,17 @@ export default function Home() {
     }
   };
 
+  const deleteMedia = async (mediaId: number) => {
+    if (!confirm(t('confirmDeleteMedia'))) return;
+    try {
+      const res = await authFetch(`${API}/api/media/${mediaId}`, { method: 'DELETE' });
+      if (!res.ok) return;
+      setHistoryMedia((prev) => prev.filter((item) => item.id !== mediaId));
+    } catch {
+      console.error('Failed to delete media');
+    }
+  };
+
   const clearError = () => setError('');
 
   const switchLocale = (l: Locale) => {
@@ -544,6 +556,7 @@ export default function Home() {
           character_id: selectedCharacter.id,
           concept: prompt.trim(),
           first_frame_path: firstFramePath,
+          spicy: spicyMode,
         }),
         signal: controller.signal,
       });
@@ -586,6 +599,7 @@ export default function Home() {
           first_frame_path: videoPrepareResult.first_frame_path,
           video_prompt: editableVideoPrompt,
           concept: prompt.trim(),
+          spicy: spicyMode,
         }),
       });
 
@@ -659,6 +673,8 @@ export default function Home() {
           character_id: selectedCharacter.id,
           prompt: prompt.trim(),
           driving_video_url: uploadResult.web_path,
+          image_path: selectedMotionImage || undefined,
+          spicy: spicyMode,
         }),
       });
 
@@ -681,6 +697,7 @@ export default function Home() {
       // Reset form so user can start a new video immediately
       setPrompt('');
       setDrivingVideoFile(null);
+      setSelectedMotionImage(null);
       if (videoInputRef.current) videoInputRef.current.value = '';
       setGeneratedImage(null);
       setGeneratedFirstFrame(null);
@@ -735,6 +752,7 @@ export default function Home() {
     setEditableVideoPrompt('');
     setSelectedFirstFrame(null);
     setFirstFrameUploadFile(null);
+    setSelectedMotionImage(null);
   };
 
   const pillStyle = (active: boolean) => ({
@@ -1362,7 +1380,7 @@ export default function Home() {
                       {t('refImageToVideo')}
                     </button>
                     <button
-                      onClick={() => { setVideoOption('motion_control'); resetGenerate(); }}
+                      onClick={() => { setVideoOption('motion_control'); resetGenerate(); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
                       style={pillStyle(videoOption === 'motion_control')}
                     >
@@ -1582,6 +1600,51 @@ export default function Home() {
                         placeholder={t('placeholderMotionPrompt')}
                         required
                       />
+                    </div>
+
+                    {/* Image selection for motion control */}
+                    <div>
+                      <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
+                        {t('selectMotionImage')}
+                      </span>
+                      <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto rounded-lg p-1">
+                        {selectedCharacter?.image_path && (
+                          <div
+                            onClick={() => setSelectedMotionImage(selectedCharacter.image_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
+                            style={{
+                              border: (selectedMotionImage === selectedCharacter.image_path || (!selectedMotionImage))
+                                ? '2px solid var(--accent)'
+                                : '2px solid transparent',
+                            }}
+                          >
+                            <img
+                              src={`${API}${selectedCharacter.image_path}`}
+                              alt={selectedCharacter.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
+                          </div>
+                        )}
+                        {portfolioImages.map((img) => (
+                          <div
+                            key={img.id}
+                            onClick={() => setSelectedMotionImage(img.file_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
+                            style={{
+                              border: selectedMotionImage === img.file_path
+                                ? '2px solid var(--accent)'
+                                : '2px solid transparent',
+                            }}
+                          >
+                            <img
+                              src={`${API}${img.file_path}`}
+                              alt={img.prompt || 'Portfolio'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
                     </div>
 
                     {/* Video file upload */}
@@ -1947,19 +2010,33 @@ export default function Home() {
                     className="group relative rounded-xl overflow-hidden text-left transition-all hover:scale-[1.02] cursor-pointer"
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
                   >
-                    {/* Download button */}
-                    <button
-                      onClick={(e) => { e.stopPropagation(); downloadMedia(item.file_path); }}
-                      className="absolute top-2 right-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity"
-                      style={{
-                        background: 'rgba(0,0,0,0.6)',
-                        color: '#fff',
-                        backdropFilter: 'blur(4px)',
-                      }}
-                      title={t('download')}
-                    >
-                      &#8595;
-                    </button>
+                    {/* Action buttons (top-right) */}
+                    <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); downloadMedia(item.file_path); }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{
+                          background: 'rgba(0,0,0,0.6)',
+                          color: '#fff',
+                          backdropFilter: 'blur(4px)',
+                        }}
+                        title={t('download')}
+                      >
+                        &#8595;
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteMedia(item.id); }}
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                        style={{
+                          background: 'rgba(0,0,0,0.6)',
+                          color: 'var(--error)',
+                          backdropFilter: 'blur(4px)',
+                        }}
+                        title={t('deleteMedia')}
+                      >
+                        &#10005;
+                      </button>
+                    </div>
                     {/* Portfolio toggle (images only) */}
                     {item.media_type === 'image' && (
                       <button

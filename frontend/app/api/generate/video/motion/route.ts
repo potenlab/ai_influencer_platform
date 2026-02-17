@@ -19,7 +19,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { character_id, prompt, driving_video_url } = body;
+    const { character_id, prompt, driving_video_url, image_path, spicy } = body;
 
     if (!character_id || !prompt || !driving_video_url) {
       return NextResponse.json(
@@ -50,14 +50,14 @@ export async function POST(request: Request) {
       character_id,
       job_type: 'video_motion',
       status: 'pending',
-      input_data: { prompt, driving_video_url },
+      input_data: { prompt, driving_video_url, image_path: image_path || character.image_path, spicy: !!spicy },
     });
 
     // Submit to FAL queue (returns immediately)
     const { request_id } = await submitVideoToQueue(
       'fal-ai/kling-video/v2.6/standard/motion-control',
       {
-        image_url: character.image_path,
+        image_url: image_path || character.image_path,
         video_url: driving_video_url,
         prompt,
         character_orientation: 'video',
