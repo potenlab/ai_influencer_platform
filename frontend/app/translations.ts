@@ -75,6 +75,7 @@ const translations: Record<Locale, Record<string, string>> = {
     deleteMedia: '삭제',
     confirmDeleteMedia: '이 미디어를 삭제하시겠습니까?',
     selectMotionImage: '캐릭터 이미지 선택',
+    errorTooLarge: '파일이 너무 큽니다. 더 작은 파일을 사용해주세요.',
     generateVideoPromptBtn: '비디오 프롬프트 생성',
 
     // Motion control
@@ -214,6 +215,7 @@ const translations: Record<Locale, Record<string, string>> = {
     deleteMedia: 'Delete',
     confirmDeleteMedia: 'Delete this media?',
     selectMotionImage: 'Select Character Image',
+    errorTooLarge: 'File is too large. Please use a smaller file.',
     generateVideoPromptBtn: 'Generate Video Prompt',
 
     // Motion control

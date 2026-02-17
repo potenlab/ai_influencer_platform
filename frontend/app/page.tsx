@@ -199,6 +199,17 @@ export default function Home() {
     return fetch(url, { ...options, headers });
   };
 
+  const safeErrorJson = async (res: Response): Promise<string> => {
+    try {
+      const text = await res.text();
+      const json = JSON.parse(text);
+      return json.error || json.message || `Error ${res.status}`;
+    } catch {
+      if (res.status === 413) return t('errorTooLarge');
+      return `Error ${res.status}: ${res.statusText}`;
+    }
+  };
+
   // Poll a single job until terminal state
   const pollJob = useCallback(async (jobId: string) => {
     const poll = async () => {
@@ -372,8 +383,7 @@ export default function Home() {
           body: formData,
         });
         if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.error || 'Failed to upload image');
+          throw new Error(await safeErrorJson(uploadRes));
         }
         const uploadResult = await uploadRes.json();
         imageUrl = uploadResult.web_path;
@@ -393,8 +403,7 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to create character');
+        throw new Error(await safeErrorJson(res));
       }
 
       const newChar = await res.json();
@@ -427,8 +436,7 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to delete character');
+        throw new Error(await safeErrorJson(res));
       }
 
       await loadCharacters();
@@ -456,8 +464,7 @@ export default function Home() {
     });
 
     if (!res.ok) {
-      const errData = await res.json();
-      throw new Error(errData.error || 'Failed to upload image');
+      throw new Error(await safeErrorJson(res));
     }
 
     const result = await res.json();
@@ -497,8 +504,7 @@ export default function Home() {
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to generate image');
+        throw new Error(await safeErrorJson(res));
       }
 
       const result = await res.json();
@@ -536,8 +542,7 @@ export default function Home() {
           body: formData,
         });
         if (!uploadRes.ok) {
-          const errData = await uploadRes.json();
-          throw new Error(errData.error || 'Failed to upload image');
+          throw new Error(await safeErrorJson(uploadRes));
         }
         const uploadResult = await uploadRes.json();
         firstFramePath = uploadResult.web_path;
@@ -564,8 +569,7 @@ export default function Home() {
       clearTimeout(timeoutId);
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to prepare video');
+        throw new Error(await safeErrorJson(res));
       }
 
       const result: VideoPrepareResult = await res.json();
@@ -604,8 +608,7 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to submit video job');
+        throw new Error(await safeErrorJson(res));
       }
 
       const result = await res.json();
@@ -657,8 +660,7 @@ export default function Home() {
       });
 
       if (!uploadRes.ok) {
-        const errData = await uploadRes.json();
-        throw new Error(errData.error || 'Failed to upload video');
+        throw new Error(await safeErrorJson(uploadRes));
       }
 
       const uploadResult = await uploadRes.json();
@@ -679,8 +681,7 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || 'Failed to submit motion video job');
+        throw new Error(await safeErrorJson(res));
       }
 
       const result = await res.json();
