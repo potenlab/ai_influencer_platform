@@ -197,46 +197,6 @@ Return ONLY the video prompt text, no JSON, no markdown.`;
   return content.trim();
 }
 
-export async function generateSpicyPrompts(
-  concept: string,
-  referenceImageDescription?: string
-): Promise<{ safePrompt: string; spicyEditPrompt: string | null }> {
-  const refContext = referenceImageDescription
-    ? `\nReference image description: ${referenceImageDescription}`
-    : '';
-
-  const prompt = `You are helping generate an AI image in TWO steps.
-Step 1: Generate a safe, high-quality base image using a standard model (good composition, character consistency, scene setting).
-Step 2: (Optional) Edit the person in the image to be more attractive and eye-catching using a second model.
-
-User concept: ${concept}${refContext}
-
-Return a JSON object with exactly these fields:
-- "safePrompt": A detailed image generation prompt for Step 1. Focus on scene, pose, composition, lighting, clothing, setting. Keep it clean and professional but with the same concept. Do NOT include any provocative or suggestive elements.
-- "spicyEditPrompt": A prompt for Step 2. IMPORTANT RULES for this prompt:
-  * NEVER use explicit words like: sexy, seductive, revealing, provocative, bare, sheer, naked, nude, cleavage, sensual, sultry, erotic, arousing, sex appeal, bikini
-  * Instead use fashion/editorial language: glamorous, stunning, captivating, bold, fierce, striking, alluring, elegant, daring
-  * Focus on: stylish fashion upgrades (e.g. "trendy crop top", "fitted designer dress"), confident body language, captivating eye contact, flattering angles, glamorous makeup and styling
-  * Think VOGUE magazine editorial — bold but tasteful
-  * If the concept doesn't need enhancement, set this to null.
-
-Return only valid JSON, no markdown.`;
-
-  const content = await chatCompletion(
-    [
-      { role: 'system', content: 'You are an expert image prompt engineer. Always return valid JSON.' },
-      { role: 'user', content: prompt },
-    ],
-    0.8
-  );
-
-  const parsed = extractJson(content);
-  return {
-    safePrompt: parsed.safePrompt || parsed.safe_prompt || concept,
-    spicyEditPrompt: parsed.spicyEditPrompt || parsed.spicy_edit_prompt || null,
-  };
-}
-
 export async function determineVideoDuration(
   videoPrompt: string
 ): Promise<number> {

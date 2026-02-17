@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
 import { generateCharacterPersonality } from '@/app/lib/openrouter';
-import { generateCharacterImage, generateSceneImage } from '@/app/lib/fal';
+import { generateCharacterImage, generateSceneImage } from '@/app/lib/image-gen';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { name, concept, audience, image_url, image_mode, spicy } = body;
+    const { name, concept, audience, image_url, image_mode } = body;
 
     if (!name || !concept) {
       return NextResponse.json(
@@ -47,10 +47,10 @@ export async function POST(request: Request) {
     if (image_url && image_mode === 'direct') {
       imagePath = image_url;
     } else if (image_url && image_mode === 'generate') {
-      const resultUrl = await generateSceneImage(personality.visual_description, [image_url], !!spicy);
+      const resultUrl = await generateSceneImage(personality.visual_description, [image_url]);
       imagePath = await uploadMediaFromUrl(resultUrl, 'images', 'png');
     } else {
-      const resultUrl = await generateCharacterImage(personality.visual_description, !!spicy);
+      const resultUrl = await generateCharacterImage(personality.visual_description);
       imagePath = await uploadMediaFromUrl(resultUrl, 'images', 'png');
     }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { generateSceneImage } from '@/app/lib/fal';
+import { generateSceneImage } from '@/app/lib/image-gen';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
 
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { character_id, prompt, option, reference_image_path, spicy } = body;
+    const { character_id, prompt, option, reference_image_path } = body;
 
     if (!character_id || !prompt) {
       return NextResponse.json(
@@ -39,8 +39,8 @@ export async function POST(request: Request) {
     }
 
     // Generate scene image
-    console.log('[generate/image] spicy:', !!spicy, 'imageUrls:', imageUrls.length, 'option:', option);
-    const resultUrl = await generateSceneImage(prompt, imageUrls, !!spicy);
+    console.log('[generate/image] imageUrls:', imageUrls.length, 'option:', option);
+    const resultUrl = await generateSceneImage(prompt, imageUrls);
     console.log('[generate/image] resultUrl:', resultUrl?.slice(0, 100));
 
     // Upload to storage

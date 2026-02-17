@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { generateSceneImage } from '@/app/lib/fal';
+import { generateSceneImage } from '@/app/lib/image-gen';
 import { generateVideoPrompt } from '@/app/lib/openrouter';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
@@ -13,7 +13,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { character_id, concept, option, reference_image_path, spicy } = body;
+    const { character_id, concept, option, reference_image_path } = body;
 
     if (!character_id || !concept) {
       return NextResponse.json(
@@ -41,11 +41,11 @@ export async function POST(request: Request) {
     }
 
     // Generate first frame image
-    const firstFrameUrl = await generateSceneImage(concept, imageUrls, !!spicy);
+    const firstFrameUrl = await generateSceneImage(concept, imageUrls);
     const firstFramePath = await uploadMediaFromUrl(firstFrameUrl, 'images', 'png');
 
     // Generate video prompt via LLM
-    const videoPrompt = await generateVideoPrompt(character, concept, !!spicy);
+    const videoPrompt = await generateVideoPrompt(character, concept);
 
     const prepareId = crypto.randomUUID();
 

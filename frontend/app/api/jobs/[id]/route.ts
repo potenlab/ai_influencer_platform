@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { xaiPollVideo } from '@/app/lib/fal';
+import { xaiPollVideo } from '@/app/lib/xai';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
 

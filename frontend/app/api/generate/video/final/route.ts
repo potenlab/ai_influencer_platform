@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { xaiSubmitVideo } from '@/app/lib/fal';
+import { xaiSubmitVideo } from '@/app/lib/xai';
 import { determineVideoDuration } from '@/app/lib/openrouter';
 import { handleError } from '@/app/lib/api-utils';
 
