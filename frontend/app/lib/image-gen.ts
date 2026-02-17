@@ -10,7 +10,7 @@ function ensureFalConfig() {
   }
 }
 
-const REALISTIC_SUFFIX = ' — photorealistic style, ultra-realistic, natural skin texture, real photograph, studio-quality lighting';
+const REALISTIC_SUFFIX = ' — raw unedited photo, candid smartphone photography, natural ambient lighting, visible skin texture and pores, no retouching, no filters, real person, not AI-generated looking';
 
 function withRealisticStyle(prompt: string): string {
   return prompt + REALISTIC_SUFFIX;

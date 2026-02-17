@@ -106,7 +106,7 @@ Generate a JSON object with:
 - tone_of_voice: Communication style (1-2 words)
 - content_style: Type of content they create (1 word)
 - content_themes: 3-5 content topics they cover (list)
-- visual_description: Detailed physical appearance for AI image generation. IMPORTANT: This should be a FRONT-FACING ID PHOTO style portrait (like passport or professional headshot). Include: exact facial features, hair style/color, clothing style, expression (neutral/professional), lighting (studio), background (plain). Make it very detailed for consistent character representation.
+- visual_description: Detailed physical appearance for AI image generation. IMPORTANT: This should look like a CANDID REAL PHOTO taken with a smartphone — NOT a studio portrait or AI-generated look. Include: exact facial features (with natural imperfections like freckles, asymmetry, pores), hair style/color (natural, not perfectly styled), clothing style (casual everyday clothes), expression (natural and relaxed, like a selfie or friend's snapshot), lighting (natural ambient light, NOT studio lighting), background (real everyday setting like a cafe, street, park — NOT plain/studio). The goal is to look like a real person's Instagram photo, not a retouched model shot. Avoid any description that sounds artificial or overly polished.
 
 Return only valid JSON.`;
 
