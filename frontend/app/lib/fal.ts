@@ -8,6 +8,19 @@ function ensureConfig() {
   }
 }
 
+// ── Re-upload external URL to fal.ai storage ──
+// Kling cannot read Supabase storage URLs directly, so we proxy through fal storage.
+export async function uploadToFalStorage(externalUrl: string): Promise<string> {
+  ensureConfig();
+  const response = await fetch(externalUrl);
+  if (!response.ok) throw new Error(`Failed to fetch ${externalUrl}`);
+  const buffer = await response.arrayBuffer();
+  const contentType = response.headers.get('content-type') || 'application/octet-stream';
+  const ext = externalUrl.split('.').pop()?.split('?')[0] || 'bin';
+  const file = new File([buffer], `upload.${ext}`, { type: contentType });
+  return await fal.storage.upload(file);
+}
+
 // ── Async queue submit (for long-running video generation) ──
 
 export interface QueueSubmitResult {

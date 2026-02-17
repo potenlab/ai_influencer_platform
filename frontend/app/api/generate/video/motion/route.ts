@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { submitVideoToQueue } from '@/app/lib/fal';
+import { submitVideoToQueue, uploadToFalStorage } from '@/app/lib/fal';
 import { handleError } from '@/app/lib/api-utils';
+
+export const maxDuration = 120;
 
 function genJobId(): string {
   return 'job_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
@@ -53,12 +55,19 @@ export async function POST(request: Request) {
       input_data: { prompt, driving_video_url, image_path: image_path || character.image_path, spicy: !!spicy },
     });
 
+    // Re-upload to fal.ai storage (Kling cannot read Supabase URLs directly)
+    const resolvedImagePath = image_path || character.image_path;
+    const [falImageUrl, falVideoUrl] = await Promise.all([
+      uploadToFalStorage(resolvedImagePath),
+      uploadToFalStorage(driving_video_url),
+    ]);
+
     // Submit to FAL queue (returns immediately)
     const { request_id } = await submitVideoToQueue(
       'fal-ai/kling-video/v2.6/standard/motion-control',
       {
-        image_url: image_path || character.image_path,
-        video_url: driving_video_url,
+        image_url: falImageUrl,
+        video_url: falVideoUrl,
         prompt,
         character_orientation: 'video',
       },
