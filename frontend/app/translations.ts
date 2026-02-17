@@ -6,7 +6,7 @@ const translations: Record<Locale, Record<string, string>> = {
     loadingCreateCharacter: 'AI가 캐릭터를 생성하고 있습니다...',
     loadingGenerateImage: '이미지를 생성하고 있습니다...',
     loadingUploadRef: '참고 이미지 업로드 중...',
-    loadingPrepareVideo: '첫 프레임 생성 + 비디오 프롬프트 생성 중...',
+    loadingPrepareVideo: '비디오 프롬프트 생성 중...',
     loadingFinalizeVideo: '비디오 생성 중... (2~3분 소요)',
     loadingUploadVideo: '비디오 업로드 중...',
     loadingMotionVideo: 'Kling Motion Control 비디오 생성 중... (2~5분 소요)',
@@ -65,6 +65,14 @@ const translations: Record<Locale, Record<string, string>> = {
     preparePrompt: '프롬프트 생성 (첫 프레임 + LLM)',
     firstFramePreview: '첫 프레임 미리보기',
     videoPromptEditable: '비디오 프롬프트 (편집 가능)',
+
+    // Portfolio & first frame selection
+    selectFirstFrame: '첫 프레임 이미지 선택',
+    uploadNewImage: '새 이미지 업로드',
+    noPortfolioImages: '포트폴리오 이미지가 없습니다. 먼저 이미지를 생성하세요.',
+    addToPortfolio: '포트폴리오에 추가',
+    removeFromPortfolio: '포트폴리오에서 제거',
+    generateVideoPromptBtn: '비디오 프롬프트 생성',
 
     // Motion control
     placeholderMotionPrompt: '예: 캐릭터가 춤추는 모습',
@@ -134,7 +142,7 @@ const translations: Record<Locale, Record<string, string>> = {
     loadingCreateCharacter: 'AI is creating the character...',
     loadingGenerateImage: 'Generating image...',
     loadingUploadRef: 'Uploading reference image...',
-    loadingPrepareVideo: 'Generating first frame + video prompt...',
+    loadingPrepareVideo: 'Generating video prompt...',
     loadingFinalizeVideo: 'Generating video... (2-3 min)',
     loadingUploadVideo: 'Uploading video...',
     loadingMotionVideo: 'Kling Motion Control video generation... (2-5 min)',
@@ -193,6 +201,14 @@ const translations: Record<Locale, Record<string, string>> = {
     preparePrompt: 'Generate Prompt (First Frame + LLM)',
     firstFramePreview: 'First Frame Preview',
     videoPromptEditable: 'Video Prompt (editable)',
+
+    // Portfolio & first frame selection
+    selectFirstFrame: 'Select First Frame',
+    uploadNewImage: 'Upload New',
+    noPortfolioImages: 'No portfolio images. Generate images first.',
+    addToPortfolio: 'Add to Portfolio',
+    removeFromPortfolio: 'Remove from Portfolio',
+    generateVideoPromptBtn: 'Generate Video Prompt',
 
     // Motion control
     placeholderMotionPrompt: 'e.g. Character dancing',

@@ -35,6 +35,7 @@ interface HistoryMedia {
   video_prompt: string | null;
   first_frame_path: string | null;
   reference_image_path: string | null;
+  is_portfolio: boolean;
   // legacy plan fields
   plan_title: string | null;
   plan_theme: string | null;
@@ -48,7 +49,7 @@ interface HistoryMedia {
 type Step = 'characters' | 'generate' | 'history';
 type GenerationMode = 'image' | 'video';
 type ImageOption = 'ref_image' | 'text_only';
-type VideoOption = 'ref_image' | 'text_only' | 'motion_control';
+type VideoOption = 'select_image' | 'motion_control';
 
 interface VideoPrepareResult {
   prepare_id: string;
@@ -96,10 +97,16 @@ export default function Home() {
   const [prompt, setPrompt] = useState('');
   const [generationMode, setGenerationMode] = useState<GenerationMode>('image');
   const [imageOption, setImageOption] = useState<ImageOption>('ref_image');
-  const [videoOption, setVideoOption] = useState<VideoOption>('ref_image');
+  const [videoOption, setVideoOption] = useState<VideoOption>('select_image');
   const [referenceImageFile, setReferenceImageFile] = useState<File | null>(null);
   const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const [drivingVideoFile, setDrivingVideoFile] = useState<File | null>(null);
+
+  // Portfolio / first frame selection states
+  const [portfolioImages, setPortfolioImages] = useState<HistoryMedia[]>([]);
+  const [selectedFirstFrame, setSelectedFirstFrame] = useState<string | null>(null);
+  const [firstFrameUploadFile, setFirstFrameUploadFile] = useState<File | null>(null);
+  const [firstFrameUploadPreview, setFirstFrameUploadPreview] = useState<string | null>(null);
 
   // Video prepare states
   const [videoPrepareResult, setVideoPrepareResult] = useState<VideoPrepareResult | null>(null);
@@ -130,6 +137,7 @@ export default function Home() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const charImageInputRef = useRef<HTMLInputElement>(null);
+  const firstFrameInputRef = useRef<HTMLInputElement>(null);
 
   // Character image preview URL
   const [charImagePreview, setCharImagePreview] = useState<string | null>(null);
@@ -256,6 +264,17 @@ export default function Home() {
     }
   }, [referenceImageFile]);
 
+  // Preview first frame upload
+  useEffect(() => {
+    if (firstFrameUploadFile) {
+      const url = URL.createObjectURL(firstFrameUploadFile);
+      setFirstFrameUploadPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setFirstFrameUploadPreview(null);
+    }
+  }, [firstFrameUploadFile]);
+
   const loadCharacters = async () => {
     try {
       const res = await authFetch(`${API}/api/characters`);
@@ -279,6 +298,40 @@ export default function Home() {
       setHistoryMedia(data);
     } catch {
       console.error('Failed to load history');
+    }
+  };
+
+  const loadPortfolioImages = async (characterId: string) => {
+    try {
+      const params = new URLSearchParams({
+        character_id: characterId,
+        media_type: 'image',
+        is_portfolio: 'true',
+      });
+      const res = await authFetch(`${API}/api/media/history?${params.toString()}`);
+      const data = await res.json();
+      setPortfolioImages(data);
+    } catch {
+      console.error('Failed to load portfolio images');
+    }
+  };
+
+  const togglePortfolio = async (mediaId: number, currentValue: boolean) => {
+    try {
+      const res = await authFetch(`${API}/api/media/${mediaId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_portfolio: !currentValue }),
+      });
+      if (!res.ok) return;
+      // Update local history state
+      setHistoryMedia((prev) =>
+        prev.map((item) =>
+          item.id === mediaId ? { ...item, is_portfolio: !currentValue } : item
+        )
+      );
+    } catch {
+      console.error('Failed to toggle portfolio');
     }
   };
 
@@ -459,12 +512,27 @@ export default function Home() {
     setLoadingMessage(t('loadingPrepareVideo'));
 
     try {
-      let refPath: string | null = null;
-      if (videoOption === 'ref_image' && referenceImageFile) {
+      // Determine first_frame_path: uploaded file or selected portfolio image
+      let firstFramePath = selectedFirstFrame;
+
+      if (firstFrameUploadFile) {
         setLoadingMessage(t('loadingUploadRef'));
-        refPath = await uploadReferenceImage();
+        const formData = new FormData();
+        formData.append('file', firstFrameUploadFile);
+        const uploadRes = await authFetch(`${API}/api/upload/image`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          const errData = await uploadRes.json();
+          throw new Error(errData.error || 'Failed to upload image');
+        }
+        const uploadResult = await uploadRes.json();
+        firstFramePath = uploadResult.web_path;
         setLoadingMessage(t('loadingPrepareVideo'));
       }
+
+      if (!firstFramePath) return;
 
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600000);
@@ -475,9 +543,7 @@ export default function Home() {
         body: JSON.stringify({
           character_id: selectedCharacter.id,
           concept: prompt.trim(),
-          option: videoOption === 'ref_image' ? 'ref_image' : 'text_only',
-          reference_image_path: refPath || undefined,
-          spicy: spicyMode,
+          first_frame_path: firstFramePath,
         }),
         signal: controller.signal,
       });
@@ -546,6 +612,8 @@ export default function Home() {
       setPrompt('');
       setReferenceImageFile(null);
       setGeneratedFirstFrame(null);
+      setSelectedFirstFrame(null);
+      setFirstFrameUploadFile(null);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -653,7 +721,10 @@ export default function Home() {
     setPrompt('');
     setReferenceImageFile(null);
     setDrivingVideoFile(null);
+    setSelectedFirstFrame(null);
+    setFirstFrameUploadFile(null);
     setCurrentStep('generate');
+    loadPortfolioImages(char.id);
   };
 
   const resetGenerate = () => {
@@ -662,6 +733,8 @@ export default function Home() {
     setGeneratedFirstFrame(null);
     setVideoPrepareResult(null);
     setEditableVideoPrompt('');
+    setSelectedFirstFrame(null);
+    setFirstFrameUploadFile(null);
   };
 
   const pillStyle = (active: boolean) => ({
@@ -1282,18 +1355,11 @@ export default function Home() {
                   </span>
                   <div className="flex gap-2 flex-wrap">
                     <button
-                      onClick={() => { setVideoOption('ref_image'); resetGenerate(); }}
+                      onClick={() => { setVideoOption('select_image'); resetGenerate(); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                      style={pillStyle(videoOption === 'ref_image')}
+                      style={pillStyle(videoOption === 'select_image')}
                     >
                       {t('refImageToVideo')}
-                    </button>
-                    <button
-                      onClick={() => { setVideoOption('text_only'); resetGenerate(); }}
-                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
-                      style={pillStyle(videoOption === 'text_only')}
-                    >
-                      {t('textOnlyToVideo')}
                     </button>
                     <button
                       onClick={() => { setVideoOption('motion_control'); resetGenerate(); }}
@@ -1305,8 +1371,8 @@ export default function Home() {
                   </div>
                 </div>
 
-                {/* ── Video options 1 & 2: ref_image / text_only ── */}
-                {(videoOption === 'ref_image' || videoOption === 'text_only') && (
+                {/* ── Video option: select_image ── */}
+                {videoOption === 'select_image' && (
                   <>
                     {/* Concept textarea */}
                     <div>
@@ -1330,69 +1396,92 @@ export default function Home() {
                       />
                     </div>
 
-                    {/* Reference image upload (option 1 only) */}
-                    {videoOption === 'ref_image' && (
-                      <div>
-                        <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                          {t('refImageUploadOptionalShort')}
-                        </span>
-                        <div
-                          className="relative rounded-lg text-center transition-all"
-                          style={{
-                            background: 'var(--bg-secondary)',
-                            border: '2px dashed var(--border)',
-                            padding: referenceImageFile ? '8px' : '24px 16px',
-                          }}
-                          onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.style.borderColor = 'var(--accent)'; }}
-                          onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); e.currentTarget.style.borderColor = 'var(--border)'; }}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            e.currentTarget.style.borderColor = 'var(--border)';
-                            const file = e.dataTransfer.files?.[0];
-                            if (file && /^image\/(png|jpe?g|webp)$/.test(file.type)) {
-                              setReferenceImageFile(file);
-                            }
-                          }}
-                        >
-                          {referenceImageFile && referenceImagePreview ? (
-                            <div className="flex items-center gap-3">
-                              <img src={referenceImagePreview} alt="Preview" className="w-16 h-16 rounded-lg object-cover" />
-                              <span className="flex-1 text-sm truncate" style={{ color: 'var(--text-primary)' }}>{referenceImageFile.name}</span>
+                    {/* Portfolio image grid for first frame selection */}
+                    <div>
+                      <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
+                        {t('selectFirstFrame')}
+                      </span>
+                      {portfolioImages.length === 0 && !firstFrameUploadFile ? (
+                        <p className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>
+                          {t('noPortfolioImages')}
+                        </p>
+                      ) : (
+                        <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg p-1">
+                          {portfolioImages.map((img) => (
+                            <div
+                              key={img.id}
+                              onClick={() => { setSelectedFirstFrame(img.file_path); setFirstFrameUploadFile(null); }}
+                              className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
+                              style={{
+                                border: selectedFirstFrame === img.file_path
+                                  ? '2px solid var(--accent)'
+                                  : '2px solid transparent',
+                              }}
+                            >
+                              <img
+                                src={`${API}${img.file_path}`}
+                                alt={img.prompt || 'Portfolio'}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                          {/* Upload new image option */}
+                          {firstFrameUploadFile && firstFrameUploadPreview ? (
+                            <div
+                              className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
+                              style={{
+                                border: selectedFirstFrame === null
+                                  ? '2px solid var(--accent)'
+                                  : '2px solid transparent',
+                              }}
+                              onClick={() => { setSelectedFirstFrame(null); }}
+                            >
+                              <img
+                                src={firstFrameUploadPreview}
+                                alt="Upload preview"
+                                className="w-full h-full object-cover"
+                              />
                               <button
-                                onClick={() => { setReferenceImageFile(null); if (imageInputRef.current) imageInputRef.current.value = ''; }}
-                                className="text-xs px-2 py-1 rounded"
-                                style={{ color: 'var(--error)' }}
+                                onClick={(e) => { e.stopPropagation(); setFirstFrameUploadFile(null); if (firstFrameInputRef.current) firstFrameInputRef.current.value = ''; }}
+                                className="absolute top-1 right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs"
+                                style={{ background: 'rgba(0,0,0,0.6)', color: '#fff' }}
                               >
-                                {t('remove')}
+                                &times;
                               </button>
                             </div>
-                          ) : (
-                            <label className="cursor-pointer block">
-                              <input
-                                ref={imageInputRef}
-                                type="file"
-                                accept="image/png,image/jpeg,image/webp"
-                                className="sr-only"
-                                onChange={(e) => { const file = e.target.files?.[0]; if (file) setReferenceImageFile(file); }}
-                              />
-                              <div className="text-2xl mb-1" style={{ color: 'var(--text-muted)' }}>+</div>
-                              <p className="text-xs" style={{ color: 'var(--text-muted)' }}>{t('dropOrClick')}</p>
-                            </label>
-                          )}
+                          ) : null}
                         </div>
-                      </div>
-                    )}
+                      )}
+                      {/* Upload button */}
+                      <label className="mt-2 inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
+                        style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                      >
+                        <input
+                          ref={firstFrameInputRef}
+                          type="file"
+                          accept="image/png,image/jpeg,image/webp"
+                          className="sr-only"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              setFirstFrameUploadFile(file);
+                              setSelectedFirstFrame(null);
+                            }
+                          }}
+                        />
+                        + {t('uploadNewImage')}
+                      </label>
+                    </div>
 
                     {/* Prepare button */}
                     {!videoPrepareResult && (
                       <button
                         onClick={prepareVideo}
-                        disabled={loading || !prompt.trim()}
+                        disabled={loading || !prompt.trim() || (!selectedFirstFrame && !firstFrameUploadFile)}
                         className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
                         style={{ background: 'var(--accent)', color: '#fff' }}
                       >
-                        {t('preparePrompt')}
+                        {t('generateVideoPromptBtn')}
                       </button>
                     )}
 
@@ -1858,6 +1947,21 @@ export default function Home() {
                     >
                       &#8595;
                     </button>
+                    {/* Portfolio toggle (images only) */}
+                    {item.media_type === 'image' && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); togglePortfolio(item.id, item.is_portfolio); }}
+                        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all"
+                        style={{
+                          background: 'rgba(0,0,0,0.6)',
+                          color: item.is_portfolio ? 'var(--accent)' : 'var(--text-muted)',
+                          backdropFilter: 'blur(4px)',
+                        }}
+                        title={item.is_portfolio ? t('removeFromPortfolio') : t('addToPortfolio')}
+                      >
+                        &#9733;
+                      </button>
+                    )}
                     {/* Media preview */}
                     <div className="aspect-square overflow-hidden bg-black">
                       {item.media_type === 'video' ? (

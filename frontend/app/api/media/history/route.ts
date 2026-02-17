@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const characterId = searchParams.get('character_id');
     const mediaType = searchParams.get('media_type');
+    const isPortfolio = searchParams.get('is_portfolio');
 
     let query = supabaseAdmin
       .from('media')
@@ -41,6 +42,12 @@ export async function GET(request: Request) {
       query = query.eq('media_type', mediaType);
     }
 
+    if (isPortfolio === 'true') {
+      query = query.eq('is_portfolio', true);
+    } else if (isPortfolio === 'false') {
+      query = query.eq('is_portfolio', false);
+    }
+
     const { data, error } = await query;
 
     if (error) throw new Error(error.message);
@@ -63,6 +70,7 @@ export async function GET(request: Request) {
         video_prompt: row.video_prompt,
         first_frame_path: row.first_frame_path,
         reference_image_path: row.reference_image_path,
+        is_portfolio: row.is_portfolio ?? true,
         plan_title: plan.title || null,
         plan_theme: plan.theme || null,
         hook: plan.hook || null,

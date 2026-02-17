@@ -1,23 +1,21 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { generateSceneImage } from '@/app/lib/image-gen';
 import { generateVideoPrompt } from '@/app/lib/openrouter';
-import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
 import crypto from 'crypto';
 
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { character_id, concept, option, reference_image_path } = body;
+    const { character_id, concept, first_frame_path } = body;
 
-    if (!character_id || !concept) {
+    if (!character_id || !concept || !first_frame_path) {
       return NextResponse.json(
-        { error: 'character_id and concept are required' },
+        { error: 'character_id, concept, and first_frame_path are required' },
         { status: 400 }
       );
     }
@@ -34,16 +32,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Character not found' }, { status: 404 });
     }
 
-    // Build image URLs for first frame generation
-    const imageUrls = [character.image_path];
-    if (option === 'ref_image' && reference_image_path) {
-      imageUrls.push(reference_image_path);
-    }
-
-    // Generate first frame image
-    const firstFrameUrl = await generateSceneImage(concept, imageUrls);
-    const firstFramePath = await uploadMediaFromUrl(firstFrameUrl, 'images', 'png');
-
     // Generate video prompt via LLM
     const videoPrompt = await generateVideoPrompt(character, concept);
 
@@ -51,7 +39,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       prepare_id: prepareId,
-      first_frame_path: firstFramePath,
+      first_frame_path: first_frame_path,
       video_prompt: videoPrompt,
     });
   } catch (error: any) {
