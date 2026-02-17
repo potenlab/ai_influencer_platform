@@ -47,7 +47,7 @@ export async function POST(request: Request) {
     if (image_url && image_mode === 'direct') {
       imagePath = image_url;
     } else if (image_url && image_mode === 'generate') {
-      const resultUrl = await generateSceneImage(personality.visual_description, [image_url], !!spicy);
+      const resultUrl = await generateSceneImage(personality.visual_description, [image_url]);
       imagePath = await uploadMediaFromUrl(resultUrl, 'images', 'png');
     } else {
       const resultUrl = await generateCharacterImage(personality.visual_description, !!spicy);

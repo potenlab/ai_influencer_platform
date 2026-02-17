@@ -1,6 +1,5 @@
 import { fal } from '@fal-ai/client';
-import { xaiImageGenerate, xaiImageEdit } from './xai';
-import { describeImageForPrompt } from './openrouter';
+import { xaiImageGenerate } from './xai';
 
 let _falConfigured = false;
 function ensureFalConfig() {
@@ -21,7 +20,6 @@ export async function generateCharacterImage(prompt: string, spicy = false): Pro
   if (spicy) {
     return xaiImageGenerate(styledPrompt);
   }
-  // Mild: fal.ai nano-banana-pro
   ensureFalConfig();
   const result = await fal.run('fal-ai/nano-banana-pro', {
     input: { prompt: styledPrompt, image_size: 'square_hd', num_images: 1 } as any,
@@ -32,21 +30,7 @@ export async function generateCharacterImage(prompt: string, spicy = false): Pro
 export async function generateSceneImage(
   prompt: string,
   imageUrls: string[],
-  spicy = false
 ): Promise<string> {
-  if (spicy) {
-    // Spicy: xAI grok
-    let fullPrompt = prompt;
-    if (imageUrls.length > 1) {
-      console.log('[generateSceneImage] describing reference image via LLM');
-      const refDescription = await describeImageForPrompt(imageUrls[1]);
-      fullPrompt = `${prompt}\n\nReference style: ${refDescription}`;
-    }
-    const styledPrompt = withRealisticStyle(fullPrompt);
-    return xaiImageEdit(styledPrompt, imageUrls[0]);
-  }
-
-  // Mild: fal.ai nano-banana-pro/edit
   const styledPrompt = withRealisticStyle(prompt);
   ensureFalConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {

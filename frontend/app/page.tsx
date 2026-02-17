@@ -122,13 +122,9 @@ export default function Home() {
   const [historyMediaTypeFilter, setHistoryMediaTypeFilter] = useState<string>('');
   const [historyDetail, setHistoryDetail] = useState<HistoryMedia | null>(null);
 
-  // Spicy mode (use xai/grok-imagine-image instead of nano-banana-pro)
-  const [spicyMode, setSpicyMode] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem('spicyMode') === 'true';
-    }
-    return false;
-  });
+  // Spicy mode toggles (per-feature)
+  const [spicyCharacter, setSpicyCharacter] = useState(false);
+  const [spicyVideo, setSpicyVideo] = useState(false);
 
   // i18n
   const [locale, setLocale] = useState<Locale>('ko');
@@ -398,7 +394,7 @@ export default function Home() {
           audience: audience || 'General audience',
           image_url: imageUrl,
           image_mode: characterImageFile ? charImageMode : undefined,
-          spicy: spicyMode,
+          spicy: spicyCharacter,
         }),
       });
 
@@ -496,7 +492,6 @@ export default function Home() {
           prompt: prompt.trim(),
           option: imageOption,
           reference_image_path: refPath || undefined,
-          spicy: spicyMode,
         }),
         signal: controller.signal,
       });
@@ -561,7 +556,7 @@ export default function Home() {
           character_id: selectedCharacter.id,
           concept: prompt.trim(),
           first_frame_path: firstFramePath,
-          spicy: spicyMode,
+          spicy: spicyVideo,
         }),
         signal: controller.signal,
       });
@@ -603,7 +598,7 @@ export default function Home() {
           first_frame_path: videoPrepareResult.first_frame_path,
           video_prompt: editableVideoPrompt,
           concept: prompt.trim(),
-          spicy: spicyMode,
+          spicy: spicyVideo,
         }),
       });
 
@@ -676,7 +671,7 @@ export default function Home() {
           prompt: prompt.trim(),
           driving_video_url: uploadResult.web_path,
           image_path: selectedMotionImage || undefined,
-          spicy: spicyMode,
+          spicy: spicyVideo,
         }),
       });
 
@@ -837,21 +832,8 @@ export default function Home() {
             })}
           </nav>
 
-          {/* Spicy + Locale + Admin + Logout */}
+          {/* Locale + Admin + Logout */}
           <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm font-medium shrink-0">
-            <button
-              onClick={() => { const next = !spicyMode; setSpicyMode(next); localStorage.setItem('spicyMode', String(next)); }}
-              className="px-1.5 sm:px-2 py-1 rounded transition-all flex items-center gap-1"
-              style={{
-                color: spicyMode ? '#ff4500' : 'var(--text-muted)',
-                background: spicyMode ? 'rgba(255,69,0,0.15)' : 'transparent',
-              }}
-              title={spicyMode ? t('spicyTitleOn') : t('spicyTitleOff')}
-            >
-              <span className="text-base">&#x1F336;&#xFE0F;</span>
-              <span className="hidden sm:inline">{spicyMode ? t('spicyOn') : t('spicyOff')}</span>
-            </button>
-            <span className="hidden sm:inline" style={{ color: 'var(--text-muted)' }}>|</span>
             <button
               onClick={() => switchLocale(locale === 'ko' ? 'en' : 'ko')}
               className="px-1.5 sm:px-2 py-1 rounded transition-all"
@@ -1097,6 +1079,23 @@ export default function Home() {
                       </div>
                     )}
                   </div>
+                  {/* Spicy toggle for character image generation */}
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <button
+                      type="button"
+                      onClick={() => setSpicyCharacter(!spicyCharacter)}
+                      className="w-9 h-5 rounded-full transition-all relative"
+                      style={{ background: spicyCharacter ? '#ff4500' : 'var(--border)' }}
+                    >
+                      <span
+                        className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                        style={{ left: spicyCharacter ? '18px' : '2px' }}
+                      />
+                    </button>
+                    <span className="text-xs" style={{ color: spicyCharacter ? '#ff4500' : 'var(--text-muted)' }}>
+                      &#x1F336;&#xFE0F; {spicyCharacter ? t('spicyOn') : t('spicyOff')}
+                    </span>
+                  </label>
                   <button
                     type="submit"
                     disabled={loading}
@@ -1505,6 +1504,24 @@ export default function Home() {
                       </label>
                     </div>
 
+                    {/* Spicy toggle for video */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <button
+                        type="button"
+                        onClick={() => setSpicyVideo(!spicyVideo)}
+                        className="w-9 h-5 rounded-full transition-all relative"
+                        style={{ background: spicyVideo ? '#ff4500' : 'var(--border)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                          style={{ left: spicyVideo ? '18px' : '2px' }}
+                        />
+                      </button>
+                      <span className="text-xs" style={{ color: spicyVideo ? '#ff4500' : 'var(--text-muted)' }}>
+                        &#x1F336;&#xFE0F; {spicyVideo ? t('spicyOn') : t('spicyOff')}
+                      </span>
+                    </label>
+
                     {/* Prepare button */}
                     {!videoPrepareResult && (
                       <button
@@ -1707,6 +1724,24 @@ export default function Home() {
                         )}
                       </div>
                     </div>
+
+                    {/* Spicy toggle for motion video */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <button
+                        type="button"
+                        onClick={() => setSpicyVideo(!spicyVideo)}
+                        className="w-9 h-5 rounded-full transition-all relative"
+                        style={{ background: spicyVideo ? '#ff4500' : 'var(--border)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                          style={{ left: spicyVideo ? '18px' : '2px' }}
+                        />
+                      </button>
+                      <span className="text-xs" style={{ color: spicyVideo ? '#ff4500' : 'var(--text-muted)' }}>
+                        &#x1F336;&#xFE0F; {spicyVideo ? t('spicyOn') : t('spicyOff')}
+                      </span>
+                    </label>
 
                     {/* Generate button */}
                     <button
