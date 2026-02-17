@@ -161,37 +161,27 @@ export async function generateVideoPrompt(
   concept: string,
   spicy = false
 ): Promise<string> {
-  const spicyInstructions = spicy
-    ? `
-SPICY MODE ON — Make this video BOLD, PROVOCATIVE, and ATTENTION-GRABBING.
-- Use dramatic, seductive, or intense body language and expressions.
-- Push boundaries with confident poses, slow-motion effects, intense eye contact.
-- Make it feel like a high-end fashion film or music video — edgy, cinematic, unapologetic.
-- Amplify charisma, attitude, and visual impact to the max.`
+  const spicyNote = spicy
+    ? ' Make it bold, provocative, and cinematic — like a fashion film or music video.'
     : '';
 
-  const prompt = `Create a detailed second-by-second video prompt for a short-form video.
+  const prompt = `Write a short video prompt based on this concept.
 
 Character: ${character.name}
-Personality: ${(character.personality_traits || []).join(', ')}
-Tone: ${character.tone_of_voice}
-Style: ${character.content_style}
-
 Concept: ${concept}
-${spicyInstructions}
-Generate a detailed video prompt describing the ENTIRE video second-by-second.
-The video can be 5-15 seconds long.
-Format: "0-2s: [action], 2-5s: [action], ..."
-Return ONLY the video prompt text, no JSON, no markdown.`;
+
+Rules:
+- Describe the scene and action in 1~3 sentences MAX.${spicyNote}
+- NO second-by-second breakdown. NO timestamps. NO "0-2s:" format.
+- Just a concise, vivid description of what happens in the video.
+- Return ONLY the prompt text, nothing else.`;
 
   const content = await chatCompletion(
     [
-      { role: 'system', content: spicy
-        ? 'You are a bold, edgy video director known for provocative, high-impact short-form content. Return only the prompt text.'
-        : 'You are a video director specializing in short-form content. Return only the prompt text.' },
+      { role: 'system', content: 'You write concise video prompts. 1-3 sentences only.' },
       { role: 'user', content: prompt },
     ],
-    spicy ? 0.9 : 0.7
+    0.7
   );
 
   return content.trim();
