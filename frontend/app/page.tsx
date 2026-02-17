@@ -1401,12 +1401,26 @@ export default function Home() {
                       <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
                         {t('selectFirstFrame')}
                       </span>
-                      {portfolioImages.length === 0 && !firstFrameUploadFile ? (
-                        <p className="text-xs py-4 text-center" style={{ color: 'var(--text-muted)' }}>
-                          {t('noPortfolioImages')}
-                        </p>
-                      ) : (
-                        <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg p-1">
+                      <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg p-1">
+                          {/* Character ID photo as first option */}
+                          {selectedCharacter?.image_path && (
+                            <div
+                              onClick={() => { setSelectedFirstFrame(selectedCharacter.image_path); setFirstFrameUploadFile(null); }}
+                              className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
+                              style={{
+                                border: selectedFirstFrame === selectedCharacter.image_path
+                                  ? '2px solid var(--accent)'
+                                  : '2px solid transparent',
+                              }}
+                            >
+                              <img
+                                src={`${API}${selectedCharacter.image_path}`}
+                                alt={selectedCharacter.name}
+                                className="w-full h-full object-cover"
+                              />
+                              <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
+                            </div>
+                          )}
                           {portfolioImages.map((img) => (
                             <div
                               key={img.id}
@@ -1451,7 +1465,6 @@ export default function Home() {
                             </div>
                           ) : null}
                         </div>
-                      )}
                       {/* Upload button */}
                       <label className="mt-2 inline-flex items-center gap-1.5 cursor-pointer text-xs font-medium px-3 py-1.5 rounded-lg transition-all"
                         style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
