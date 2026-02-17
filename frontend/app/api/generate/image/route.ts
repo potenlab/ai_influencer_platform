@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     const user = await requireAuth(request);
     const body = await request.json();
-    const { character_id, prompt, option, reference_image_path } = body;
+    const { character_id, prompt, option, reference_image_path, spicy } = body;
 
     if (!character_id || !prompt) {
       return NextResponse.json(
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
 
     // Generate scene image
     console.log('[generate/image] imageUrls:', imageUrls.length, 'option:', option);
-    const resultUrl = await generateSceneImage(prompt, imageUrls);
+    const resultUrl = await generateSceneImage(prompt, imageUrls, !!spicy);
     console.log('[generate/image] resultUrl:', resultUrl?.slice(0, 100));
 
     // Upload to storage
