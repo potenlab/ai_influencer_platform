@@ -126,6 +126,7 @@ const translations: Record<Locale, Record<string, string>> = {
     spicyOff: 'Mild',
     spicyTitleOn: 'Spicy ON (Grok Image)',
     spicyTitleOff: 'Spicy OFF (Nano Banana Pro)',
+    spicyRefImageWarning: '* Spicy 모드에서는 참고 이미지를 텍스트로 변환하여 생성하므로, 참고 이미지와 결과가 많이 다를 수 있습니다.',
 
     // Duration info
     durationInfo: '* 영상 길이(5~15초)는 AI가 프롬프트를 분석하여 자동 결정합니다.',
@@ -274,6 +275,7 @@ const translations: Record<Locale, Record<string, string>> = {
     spicyOff: 'Mild',
     spicyTitleOn: 'Spicy ON (Grok Image)',
     spicyTitleOff: 'Spicy OFF (Nano Banana Pro)',
+    spicyRefImageWarning: '* In Spicy mode, the reference image is converted to text, so the result may differ significantly from the reference.',
 
     // Duration info
     durationInfo: '* Duration (5-15s) is automatically determined by AI based on the prompt.',

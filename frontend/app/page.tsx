@@ -495,7 +495,7 @@ export default function Home() {
           prompt: prompt.trim(),
           option: imageOption,
           reference_image_path: refPath || undefined,
-          spicy: imageOption === 'text_only' ? spicyImage : false,
+          spicy: (imageOption === 'text_only' || imageOption === 'ref_image') ? spicyImage : false,
         }),
         signal: controller.signal,
       });
@@ -1417,8 +1417,8 @@ export default function Home() {
                   </div>
                 )}
 
-                {/* Spicy toggle (text_only only) */}
-                {imageOption === 'text_only' && (
+                {/* Spicy toggle (text_only & ref_image) */}
+                {(imageOption === 'text_only' || imageOption === 'ref_image') && (
                   <label className="flex items-center gap-2 cursor-pointer select-none">
                     <button
                       type="button"
@@ -1435,6 +1435,13 @@ export default function Home() {
                       &#x1F336;&#xFE0F; {spicyImage ? t('spicyOn') : t('spicyOff')}
                     </span>
                   </label>
+                )}
+
+                {/* Spicy + ref_image warning */}
+                {imageOption === 'ref_image' && spicyImage && (
+                  <p className="text-xs" style={{ color: '#ff4500', opacity: 0.8 }}>
+                    {t('spicyRefImageWarning')}
+                  </p>
                 )}
 
                 {/* Generate button (not for shots) */}

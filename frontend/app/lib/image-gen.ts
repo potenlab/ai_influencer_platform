@@ -1,5 +1,6 @@
 import { fal } from '@fal-ai/client';
 import { xaiImageGenerate, xaiImageEdit } from './xai';
+import { describeReferenceImage } from './openrouter';
 
 let _falConfigured = false;
 function ensureFalConfig() {
@@ -56,12 +57,21 @@ export async function generateSceneImage(
 ): Promise<string> {
   const styledPrompt = withRealisticStyle(prompt);
 
-  // Spicy (text_only, no reference image): xAI grok edit on character image
-  if (spicy && imageUrls.length === 1) {
-    return xaiImageEdit(styledPrompt, imageUrls[0]);
+  // Spicy mode: xAI grok edit
+  if (spicy) {
+    if (imageUrls.length === 1) {
+      // text_only: direct grok edit on character image
+      return xaiImageEdit(styledPrompt, imageUrls[0]);
+    }
+    // ref_image: describe reference image via Kimi K2.5, then grok edit on character image
+    const refDescription = await describeReferenceImage(imageUrls[1]);
+    const combinedPrompt = withRealisticStyle(
+      `${prompt}. Reference scene: ${refDescription}`
+    );
+    return xaiImageEdit(combinedPrompt, imageUrls[0]);
   }
 
-  // Reference image or mild: always fal.ai nano-banana-pro/edit
+  // Mild mode: fal.ai nano-banana-pro/edit
   ensureFalConfig();
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {

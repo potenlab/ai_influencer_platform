@@ -85,6 +85,54 @@ Return ONLY the descriptive text, no explanations or prefixes. Keep it under 200
   );
 }
 
+export async function describeReferenceImage(imageUrl: string): Promise<string> {
+  const model = 'moonshotai/kimi-k2.5';
+  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.OPENROUTER_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      model,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'image_url', image_url: { url: imageUrl } },
+            {
+              type: 'text',
+              text: `Describe this reference image in detail for use as an AI image generation prompt. Focus on:
+- Scene composition, setting, background
+- Pose, body position, camera angle
+- Lighting, mood, color palette
+- Clothing, accessories, styling
+- Props, objects, and notable visual elements
+
+Return ONLY the descriptive text, no explanations or prefixes. Keep it under 150 words.`,
+            },
+          ],
+        },
+      ],
+      temperature: 0.4,
+    }),
+  });
+  const rawText = await res.text();
+  if (!res.ok) {
+    throw new Error(`Kimi K2.5 vision error ${res.status}: ${rawText}`);
+  }
+  let data;
+  try {
+    data = JSON.parse(rawText);
+  } catch {
+    throw new Error(`Kimi K2.5 vision returned non-JSON: ${rawText.slice(0, 200)}`);
+  }
+  if (data.error) {
+    throw new Error(`Kimi K2.5 vision API error: ${JSON.stringify(data.error)}`);
+  }
+  return data.choices?.[0]?.message?.content || '';
+}
+
 function extractJson(content: string): any {
   const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (match) content = match[1];
