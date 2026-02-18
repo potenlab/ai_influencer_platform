@@ -30,7 +30,7 @@ export interface QueueSubmitResult {
 // ── Poll FAL queue for video generation status ──
 export async function falPollVideo(
   requestId: string,
-  endpointId = 'fal-ai/kling-video/v2.6/standard/motion-control'
+  endpointId = 'fal-ai/kling-video/v2.6/pro/motion-control'
 ): Promise<{ status: string; videoUrl?: string; error?: string }> {
   ensureConfig();
   try {
