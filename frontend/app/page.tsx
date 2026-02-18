@@ -2317,165 +2317,176 @@ export default function Home() {
                 onClick={() => setHistoryDetail(null)}
               >
                 <div
-                  className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-xl animate-fade-in mx-2 sm:mx-0"
+                  className="relative w-full max-w-5xl max-h-[90vh] rounded-xl animate-fade-in mx-2 sm:mx-0 overflow-hidden"
                   style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
                   onClick={(e) => e.stopPropagation()}
                 >
-                  {/* Media */}
-                  <div className="bg-black">
-                    {historyDetail.media_type === 'video' ? (
-                      <video
-                        controls
-                        autoPlay
-                        className="w-full"
-                        src={`${API}${historyDetail.file_path}`}
-                      />
-                    ) : (
-                      <img
-                        src={`${API}${historyDetail.file_path}`}
-                        alt={historyDetail.prompt || historyDetail.plan_title || 'Media'}
-                        className="w-full"
-                      />
-                    )}
-                  </div>
+                  {/* Close button */}
+                  <button
+                    onClick={() => setHistoryDetail(null)}
+                    className="absolute top-3 right-3 z-10 w-8 h-8 flex items-center justify-center rounded-full text-white/80 hover:text-white hover:bg-white/20 transition-colors"
+                    style={{ background: 'rgba(0,0,0,0.5)' }}
+                  >
+                    ✕
+                  </button>
 
-                  {/* Details */}
-                  <div className="p-4 sm:p-6 space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <h3 className="font-bold text-base sm:text-lg" style={{ color: 'var(--text-primary)' }}>
-                        {historyDetail.prompt || historyDetail.plan_title || 'Untitled'}
-                      </h3>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => downloadMedia(historyDetail.file_path)}
-                          className="text-sm px-3 py-1.5 rounded-lg"
-                          style={{ background: 'var(--accent)', color: '#fff' }}
-                        >
-                          {t('download')}
-                        </button>
-                        <button
-                          onClick={() => setHistoryDetail(null)}
-                          className="text-sm px-3 py-1.5 rounded-lg"
-                          style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
-                        >
-                          {t('close')}
-                        </button>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      {historyDetail.character_image_path && (
+                  <div className="flex flex-col sm:flex-row max-h-[90vh]">
+                    {/* Media (left side on desktop) */}
+                    <div className="sm:w-[58%] shrink-0 bg-black flex items-center justify-center max-h-[50vh] sm:max-h-[85vh] overflow-hidden">
+                      {historyDetail.media_type === 'video' ? (
+                        <video
+                          controls
+                          autoPlay
+                          className="max-w-full max-h-[50vh] sm:max-h-[85vh] object-contain"
+                          src={`${API}${historyDetail.file_path}`}
+                        />
+                      ) : (
                         <img
-                          src={`${API}${historyDetail.character_image_path}`}
-                          alt={historyDetail.character_name}
-                          className="w-8 h-8 rounded-full object-cover"
+                          src={`${API}${historyDetail.file_path}`}
+                          alt={historyDetail.prompt || historyDetail.plan_title || 'Media'}
+                          className="max-w-full max-h-[50vh] sm:max-h-[85vh] object-contain"
                         />
                       )}
-                      <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
-                        {historyDetail.character_name}
-                      </span>
-                      <span
-                        className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
-                      >
-                        {historyDetail.media_type === 'video' ? t('video') : t('image')}
-                      </span>
-                      {historyDetail.generation_mode && (
+                    </div>
+
+                    {/* Details (right side on desktop) */}
+                    <div className="sm:w-[42%] overflow-y-auto max-h-[40vh] sm:max-h-[85vh] p-4 sm:p-6 space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <h3 className="font-bold text-base sm:text-lg pr-8 sm:pr-0" style={{ color: 'var(--text-primary)' }}>
+                          {historyDetail.prompt || historyDetail.plan_title || 'Untitled'}
+                        </h3>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => downloadMedia(historyDetail.file_path)}
+                            className="text-sm px-3 py-1.5 rounded-lg"
+                            style={{ background: 'var(--accent)', color: '#fff' }}
+                          >
+                            {t('download')}
+                          </button>
+                          <button
+                            onClick={() => setHistoryDetail(null)}
+                            className="text-sm px-3 py-1.5 rounded-lg"
+                            style={{ background: 'var(--bg-secondary)', color: 'var(--text-secondary)' }}
+                          >
+                            {t('close')}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {historyDetail.character_image_path && (
+                          <img
+                            src={`${API}${historyDetail.character_image_path}`}
+                            alt={historyDetail.character_name}
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        )}
+                        <span className="text-sm" style={{ color: 'var(--text-secondary)' }}>
+                          {historyDetail.character_name}
+                        </span>
                         <span
                           className="text-xs px-2 py-0.5 rounded-full"
-                          style={{ background: 'var(--accent)', color: '#fff' }}
+                          style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
                         >
-                          {historyDetail.generation_mode}
+                          {historyDetail.media_type === 'video' ? t('video') : t('image')}
                         </span>
-                      )}
+                        {historyDetail.generation_mode && (
+                          <span
+                            className="text-xs px-2 py-0.5 rounded-full"
+                            style={{ background: 'var(--accent)', color: '#fff' }}
+                          >
+                            {historyDetail.generation_mode}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {/* Show prompt (v2) or plan details (legacy) */}
+                        {historyDetail.prompt && (
+                          <div>
+                            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelPrompt')}</span>
+                            <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
+                              {historyDetail.prompt}
+                            </p>
+                          </div>
+                        )}
+                        {historyDetail.video_prompt && (
+                          <div>
+                            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoPrompt')}</span>
+                            <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
+                              {historyDetail.video_prompt}
+                            </p>
+                          </div>
+                        )}
+                        {historyDetail.first_frame_path && (
+                          <div>
+                            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFrame')}</span>
+                            <img
+                              src={`${API}${historyDetail.first_frame_path}`}
+                              alt="First frame"
+                              className="mt-1 w-32 rounded-lg"
+                              style={{ border: '1px solid var(--border)' }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Legacy plan fields */}
+                        {!historyDetail.prompt && historyDetail.plan_title && (
+                          <>
+                            {historyDetail.plan_theme && (
+                              <div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelTheme')}</span>
+                                <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
+                                  {historyDetail.plan_theme}
+                                </p>
+                              </div>
+                            )}
+                            {historyDetail.hook && (
+                              <div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelHook')}</span>
+                                <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                                  {historyDetail.hook}
+                                </p>
+                              </div>
+                            )}
+                            {historyDetail.plan_first_frame_prompt && (
+                              <div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFramePrompt')}</span>
+                                <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
+                                  {historyDetail.plan_first_frame_prompt}
+                                </p>
+                              </div>
+                            )}
+                            {historyDetail.plan_video_prompt && (
+                              <div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoFlow')}</span>
+                                <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
+                                  {historyDetail.plan_video_prompt}
+                                </p>
+                              </div>
+                            )}
+                            {historyDetail.call_to_action && (
+                              <div>
+                                <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelCta')}</span>
+                                <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                                  {historyDetail.call_to_action}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+
+                      <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                        {new Date(historyDetail.created_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </p>
                     </div>
-
-                    <div className="space-y-3">
-                      {/* Show prompt (v2) or plan details (legacy) */}
-                      {historyDetail.prompt && (
-                        <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelPrompt')}</span>
-                          <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
-                            {historyDetail.prompt}
-                          </p>
-                        </div>
-                      )}
-                      {historyDetail.video_prompt && (
-                        <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoPrompt')}</span>
-                          <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
-                            {historyDetail.video_prompt}
-                          </p>
-                        </div>
-                      )}
-                      {historyDetail.first_frame_path && (
-                        <div>
-                          <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFrame')}</span>
-                          <img
-                            src={`${API}${historyDetail.first_frame_path}`}
-                            alt="First frame"
-                            className="mt-1 w-32 rounded-lg"
-                            style={{ border: '1px solid var(--border)' }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Legacy plan fields */}
-                      {!historyDetail.prompt && historyDetail.plan_title && (
-                        <>
-                          {historyDetail.plan_theme && (
-                            <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelTheme')}</span>
-                              <p className="text-sm mt-0.5" style={{ color: 'var(--text-primary)' }}>
-                                {historyDetail.plan_theme}
-                              </p>
-                            </div>
-                          )}
-                          {historyDetail.hook && (
-                            <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelHook')}</span>
-                              <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                                {historyDetail.hook}
-                              </p>
-                            </div>
-                          )}
-                          {historyDetail.plan_first_frame_prompt && (
-                            <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelFirstFramePrompt')}</span>
-                              <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
-                                {historyDetail.plan_first_frame_prompt}
-                              </p>
-                            </div>
-                          )}
-                          {historyDetail.plan_video_prompt && (
-                            <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelVideoFlow')}</span>
-                              <p className="text-sm mt-0.5 font-mono leading-relaxed" style={{ color: 'var(--accent-light)' }}>
-                                {historyDetail.plan_video_prompt}
-                              </p>
-                            </div>
-                          )}
-                          {historyDetail.call_to_action && (
-                            <div>
-                              <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>{t('labelCta')}</span>
-                              <p className="text-sm mt-0.5" style={{ color: 'var(--text-secondary)' }}>
-                                {historyDetail.call_to_action}
-                              </p>
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-
-                    <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
-                      {new Date(historyDetail.created_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                      })}
-                    </p>
                   </div>
                 </div>
               </div>
