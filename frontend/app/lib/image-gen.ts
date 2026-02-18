@@ -27,6 +27,28 @@ export async function generateCharacterImage(prompt: string, spicy = false): Pro
   return (result as any).data.images[0].url;
 }
 
+export async function generateShotImage(
+  prompt: string,
+  sourceImageUrl: string,
+  spicy = false,
+): Promise<string> {
+  const styledPrompt = withRealisticStyle(prompt);
+
+  if (spicy) {
+    return xaiImageEdit(styledPrompt, sourceImageUrl);
+  }
+
+  ensureFalConfig();
+  const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
+    input: {
+      prompt: styledPrompt,
+      image_urls: [sourceImageUrl],
+      num_images: 1,
+    } as any,
+  });
+  return (result as any).data.images[0].url;
+}
+
 export async function generateSceneImage(
   prompt: string,
   imageUrls: string[],

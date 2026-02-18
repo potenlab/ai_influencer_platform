@@ -187,6 +187,37 @@ Rules:
   return content.trim();
 }
 
+export async function generateShotsPrompts(
+  imageDescription: string,
+  count = 5
+): Promise<string[]> {
+  const prompt = `Based on the following image description, generate ${count} different photo variation prompts.
+Each variation should look like it was taken at the SAME location, SAME day, with the SAME person wearing the SAME outfit.
+But each shot should have a DIFFERENT angle, pose, expression, or framing — like a photographer taking multiple shots during one session.
+
+Original image description:
+${imageDescription}
+
+Rules:
+- Keep the same person, same clothing, same setting/background
+- Vary: camera angle (close-up, full body, over-the-shoulder, side profile, etc.), pose, expression, framing
+- Each prompt should be a complete image generation prompt (1-2 sentences)
+- Make them feel like candid photos from a real photoshoot
+- Return ONLY a JSON array of ${count} strings, no explanation
+
+Example format: ["prompt 1", "prompt 2", ...]`;
+
+  const content = await chatCompletion(
+    [
+      { role: 'system', content: 'You generate image variation prompts. Always return a valid JSON array of strings.' },
+      { role: 'user', content: prompt },
+    ],
+    0.8
+  );
+
+  return extractJson(content);
+}
+
 export async function determineVideoDuration(
   videoPrompt: string
 ): Promise<number> {

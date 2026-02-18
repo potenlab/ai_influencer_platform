@@ -24,6 +24,19 @@ export async function GET(
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Shots jobs: no external polling needed, DB state is updated by /shots/run
+    if (job.job_type === 'shots') {
+      return NextResponse.json({
+        id: job.id,
+        job_type: job.job_type,
+        status: job.status,
+        result_data: job.result_data,
+        error_message: job.error_message,
+        created_at: job.created_at,
+        updated_at: job.updated_at,
+      });
+    }
+
     // If still processing, poll xAI for status
     if (job.status === 'processing' && job.fal_request_id) {
       try {

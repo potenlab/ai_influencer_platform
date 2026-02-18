@@ -48,7 +48,7 @@ interface HistoryMedia {
 
 type Step = 'characters' | 'generate' | 'history';
 type GenerationMode = 'image' | 'video';
-type ImageOption = 'ref_image' | 'text_only';
+type ImageOption = 'ref_image' | 'text_only' | 'shots';
 type VideoOption = 'select_image' | 'motion_control';
 
 interface VideoPrepareResult {
@@ -126,6 +126,8 @@ export default function Home() {
   const [spicyCharacter, setSpicyCharacter] = useState(false);
   const [spicyImage, setSpicyImage] = useState(false);
   const [spicyVideo, setSpicyVideo] = useState(false);
+  const [spicyShots, setSpicyShots] = useState(false);
+  const [selectedShotsImage, setSelectedShotsImage] = useState<string | null>(null);
 
   // i18n
   const [locale, setLocale] = useState<Locale>('ko');
@@ -514,6 +516,62 @@ export default function Home() {
       } else {
         setError(err.message);
       }
+    } finally {
+      setLoading(false);
+      setLoadingMessage('');
+    }
+  };
+
+  const generateShots = async () => {
+    const sourceImage = selectedShotsImage;
+    if (!selectedCharacter || !sourceImage) return;
+    clearError();
+    setLoading(true);
+    setLoadingMessage(t('loadingGenerateShots'));
+
+    try {
+      // Step 1: Create 5 jobs via /api/generate/shots
+      const res = await authFetch(`${API}/api/generate/shots`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          character_id: selectedCharacter.id,
+          source_image_path: sourceImage,
+          spicy: spicyShots,
+        }),
+      });
+
+      if (!res.ok) {
+        throw new Error(await safeErrorJson(res));
+      }
+
+      const result = await res.json();
+      const shotJobs: VideoJob[] = result.jobs.map((j: { id: string; prompt: string }) => ({
+        job_id: j.id,
+        status: 'pending' as const,
+        job_type: 'shots',
+        character_name: selectedCharacter.name,
+        character_image_path: selectedCharacter.image_path,
+        prompt: j.prompt,
+      }));
+
+      setVideoJobs((prev) => [...prev, ...shotJobs]);
+
+      // Step 2: Fire-and-forget each shot run
+      for (const j of result.jobs) {
+        authFetch(`${API}/api/generate/shots/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ job_id: j.id }),
+        }).catch(() => {}); // fire-and-forget
+
+        pollJob(j.id);
+      }
+
+      // Reset form
+      setSelectedShotsImage(null);
+    } catch (err: any) {
+      setError(err.message);
     } finally {
       setLoading(false);
       setLoadingMessage('');
@@ -1271,10 +1329,18 @@ export default function Home() {
                     >
                       {t('textOnly')}
                     </button>
+                    <button
+                      onClick={() => { setImageOption('shots'); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
+                      className="px-3 py-1.5 rounded-lg text-xs font-medium transition-all"
+                      style={pillStyle(imageOption === 'shots')}
+                    >
+                      {t('shots')}
+                    </button>
                   </div>
                 </div>
 
-                {/* Prompt */}
+                {/* Prompt (not for shots) */}
+                {imageOption !== 'shots' && (
                 <div>
                   <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--text-secondary)' }}>
                     {t('promptRequired')}
@@ -1295,6 +1361,7 @@ export default function Home() {
                     required
                   />
                 </div>
+                )}
 
                 {/* Reference image upload (only for ref_image option) */}
                 {imageOption === 'ref_image' && (
@@ -1370,7 +1437,8 @@ export default function Home() {
                   </label>
                 )}
 
-                {/* Generate button */}
+                {/* Generate button (not for shots) */}
+                {imageOption !== 'shots' && (
                 <button
                   onClick={generateImage}
                   disabled={loading || !prompt.trim()}
@@ -1379,6 +1447,90 @@ export default function Home() {
                 >
                   {t('generateImage')}
                 </button>
+                )}
+
+                {/* ── Shots Mode ── */}
+                {imageOption === 'shots' && (
+                  <>
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                      {t('shotsDescription')}
+                    </p>
+
+                    {/* Source image selection grid */}
+                    <div>
+                      <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
+                        {t('selectSourceImage')}
+                      </span>
+                      <div className="grid grid-cols-3 gap-2 max-h-60 overflow-y-auto rounded-lg p-1">
+                        {/* Character ID photo as first option */}
+                        {selectedCharacter?.image_path && (
+                          <div
+                            onClick={() => setSelectedShotsImage(selectedCharacter.image_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
+                            style={{
+                              border: selectedShotsImage === selectedCharacter.image_path
+                                ? '2px solid var(--accent)'
+                                : '2px solid transparent',
+                            }}
+                          >
+                            <img
+                              src={`${API}${selectedCharacter.image_path}`}
+                              alt={selectedCharacter.name}
+                              className="w-full h-full object-cover"
+                            />
+                            <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
+                          </div>
+                        )}
+                        {portfolioImages.map((img) => (
+                          <div
+                            key={img.id}
+                            onClick={() => setSelectedShotsImage(img.file_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
+                            style={{
+                              border: selectedShotsImage === img.file_path
+                                ? '2px solid var(--accent)'
+                                : '2px solid transparent',
+                            }}
+                          >
+                            <img
+                              src={`${API}${img.file_path}`}
+                              alt={img.prompt || 'Portfolio'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Spicy toggle */}
+                    <label className="flex items-center gap-2 cursor-pointer select-none">
+                      <button
+                        type="button"
+                        onClick={() => setSpicyShots(!spicyShots)}
+                        className="w-9 h-5 rounded-full transition-all relative"
+                        style={{ background: spicyShots ? '#ff4500' : 'var(--border)' }}
+                      >
+                        <span
+                          className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all"
+                          style={{ left: spicyShots ? '18px' : '2px' }}
+                        />
+                      </button>
+                      <span className="text-xs" style={{ color: spicyShots ? '#ff4500' : 'var(--text-muted)' }}>
+                        &#x1F336;&#xFE0F; {spicyShots ? t('spicyOn') : t('spicyOff')}
+                      </span>
+                    </label>
+
+                    {/* Generate Shots button */}
+                    <button
+                      onClick={generateShots}
+                      disabled={loading || !selectedShotsImage}
+                      className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                      style={{ background: 'var(--accent)', color: '#fff' }}
+                    >
+                      {t('generateShots')}
+                    </button>
+                  </>
+                )}
               </div>
             )}
 
@@ -1788,7 +1940,7 @@ export default function Home() {
                       )}
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                          {t('jobStatusLabel')} — {job.job_type === 'video_final' ? t('generateVideo') : t('generateMotionVideo')}
+                          {job.job_type === 'shots' ? t('shotsJobLabel') : t('jobStatusLabel')} — {job.job_type === 'video_final' ? t('generateVideo') : job.job_type === 'shots' ? t('shots') : t('generateMotionVideo')}
                         </p>
                         <p className="text-xs mt-0.5" style={{
                           color: isDone ? 'var(--accent)' : isFailed ? 'var(--error)' : 'var(--text-muted)',

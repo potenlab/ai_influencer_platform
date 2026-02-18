@@ -130,6 +130,14 @@ const translations: Record<Locale, Record<string, string>> = {
     // Duration info
     durationInfo: '* 영상 길이(5~15초)는 AI가 프롬프트를 분석하여 자동 결정합니다.',
 
+    // Shots
+    shots: 'Shots',
+    generateShots: 'Shots 생성 (5장)',
+    loadingGenerateShots: 'Shots 프롬프트 생성 중...',
+    shotsDescription: '소스 이미지를 기반으로 같은 장소에서 다양한 앵글/포즈의 사진 5장을 생성합니다',
+    selectSourceImage: '소스 이미지 선택',
+    shotsJobLabel: 'Shots 생성',
+
     // History detail labels
     labelPrompt: '프롬프트',
     labelVideoPrompt: '비디오 프롬프트',
@@ -269,6 +277,14 @@ const translations: Record<Locale, Record<string, string>> = {
 
     // Duration info
     durationInfo: '* Duration (5-15s) is automatically determined by AI based on the prompt.',
+
+    // Shots
+    shots: 'Shots',
+    generateShots: 'Generate 5 Shots',
+    loadingGenerateShots: 'Generating shots prompts...',
+    shotsDescription: 'Generate 5 photos with different angles/poses from the same source image',
+    selectSourceImage: 'Select Source Image',
+    shotsJobLabel: 'Shots Generation',
 
     // History detail labels
     labelPrompt: 'PROMPT',
