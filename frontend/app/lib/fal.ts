@@ -27,6 +27,27 @@ export interface QueueSubmitResult {
   request_id: string;
 }
 
+// ── Poll FAL queue for video generation status ──
+export async function falPollVideo(
+  requestId: string,
+  endpointId = 'fal-ai/kling-video/v2.6/standard/motion-control'
+): Promise<{ status: string; videoUrl?: string; error?: string }> {
+  ensureConfig();
+  try {
+    const queueStatus = await fal.queue.status(endpointId, { requestId });
+    if (queueStatus.status === 'COMPLETED') {
+      const result = await fal.queue.result(endpointId, { requestId });
+      const videoUrl = (result.data as any)?.video?.url;
+      return videoUrl
+        ? { status: 'done', videoUrl }
+        : { status: 'failed', error: 'No video URL in FAL result' };
+    }
+    return { status: 'processing' };
+  } catch (err: any) {
+    return { status: 'failed', error: err.message || 'FAL poll error' };
+  }
+}
+
 export async function submitVideoToQueue(
   model: string,
   input: Record<string, any>,

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
 import { xaiPollVideo } from '@/app/lib/xai';
+import { falPollVideo } from '@/app/lib/fal';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
 import { handleError } from '@/app/lib/api-utils';
 
@@ -40,7 +41,9 @@ export async function GET(
     // If still processing, poll xAI for status
     if (job.status === 'processing' && job.fal_request_id) {
       try {
-        const poll = await xaiPollVideo(job.fal_request_id);
+        const poll = job.job_type === 'video_motion'
+          ? await falPollVideo(job.fal_request_id)
+          : await xaiPollVideo(job.fal_request_id);
 
         if (poll.status === 'failed') {
           await supabaseAdmin

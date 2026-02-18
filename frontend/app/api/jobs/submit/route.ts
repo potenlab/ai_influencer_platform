@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
-import { submitVideoToQueue } from '@/app/lib/fal';
+import { submitVideoToQueue, uploadToFalStorage } from '@/app/lib/fal';
 import { determineVideoDuration } from '@/app/lib/openrouter';
 import { handleError } from '@/app/lib/api-utils';
 
@@ -98,9 +98,13 @@ export async function POST(request: Request) {
       }
 
       falModel = 'fal-ai/kling-video/v2.6/standard/motion-control';
+      const [falImageUrl, falVideoUrl] = await Promise.all([
+        uploadToFalStorage(character.image_path),
+        uploadToFalStorage(driving_video_url),
+      ]);
       falInput = {
-        image_url: character.image_path,
-        video_url: driving_video_url,
+        image_url: falImageUrl,
+        video_url: falVideoUrl,
         prompt,
         character_orientation: 'video',
       };
