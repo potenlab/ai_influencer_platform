@@ -4,6 +4,10 @@ import { supabaseAdmin } from '@/app/lib/supabase-server';
 import { describeImageForPrompt, generateShotsPrompts } from '@/app/lib/openrouter';
 import { handleError } from '@/app/lib/api-utils';
 
+function genJobId(): string {
+  return 'job_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+}
+
 export const maxDuration = 120;
 
 export async function POST(request: Request) {
@@ -40,9 +44,11 @@ export async function POST(request: Request) {
     // Step 3: Create 5 job rows
     const jobs: { id: string; prompt: string }[] = [];
     for (const shotPrompt of prompts) {
-      const { data: job, error: jobError } = await supabaseAdmin
+      const jobId = genJobId();
+      const { error: jobError } = await supabaseAdmin
         .from('jobs')
         .insert({
+          id: jobId,
           user_id: user.id,
           character_id,
           job_type: 'shots',
@@ -52,14 +58,10 @@ export async function POST(request: Request) {
             source_image_path,
             spicy: !!spicy,
           },
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        })
-        .select()
-        .single();
+        });
 
       if (jobError) throw new Error(jobError.message);
-      jobs.push({ id: job.id, prompt: shotPrompt });
+      jobs.push({ id: jobId, prompt: shotPrompt });
     }
 
     return NextResponse.json({ jobs });
