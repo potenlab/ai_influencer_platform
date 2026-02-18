@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         );
       }
 
-      falModel = 'fal-ai/kling-video/v2.6/standard/motion-control';
+      falModel = 'fal-ai/kling-video/v2.6/pro/motion-control';
       const [falImageUrl, falVideoUrl] = await Promise.all([
         uploadToFalStorage(character.image_path),
         uploadToFalStorage(driving_video_url),

@@ -64,7 +64,7 @@ export async function POST(request: Request) {
 
     // Submit to FAL queue (returns immediately)
     const { request_id } = await submitVideoToQueue(
-      'fal-ai/kling-video/v2.6/standard/motion-control',
+      'fal-ai/kling-video/v2.6/pro/motion-control',
       {
         image_url: falImageUrl,
         video_url: falVideoUrl,
