@@ -28,6 +28,48 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth(request);
+    const { id } = await params;
+    const body = await request.json();
+    const { image_path } = body;
+
+    if (!image_path || typeof image_path !== 'string') {
+      return NextResponse.json(
+        { error: 'image_path (string) is required' },
+        { status: 400 }
+      );
+    }
+
+    // Verify character belongs to user
+    const { data: character, error: fetchError } = await supabaseAdmin
+      .from('characters')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !character) {
+      return NextResponse.json({ error: 'Character not found' }, { status: 404 });
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from('characters')
+      .update({ image_path })
+      .eq('id', id);
+
+    if (updateError) throw new Error(updateError.message);
+
+    return NextResponse.json({ success: true, image_path });
+  } catch (error: any) {
+    return handleError(error);
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }

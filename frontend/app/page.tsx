@@ -128,6 +128,7 @@ export default function Home() {
   const [spicyVideo, setSpicyVideo] = useState(false);
   const [spicyShots, setSpicyShots] = useState(false);
   const [selectedShotsImage, setSelectedShotsImage] = useState<string | null>(null);
+  const [showProfileImagePicker, setShowProfileImagePicker] = useState(false);
 
   // i18n
   const [locale, setLocale] = useState<Locale>('ko');
@@ -354,6 +355,26 @@ export default function Home() {
       setHistoryMedia((prev) => prev.filter((item) => item.id !== mediaId));
     } catch {
       console.error('Failed to delete media');
+    }
+  };
+
+  const changeCharacterImage = async (newImagePath: string) => {
+    if (!selectedCharacter) return;
+    try {
+      const res = await authFetch(`${API}/api/characters/${selectedCharacter.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_path: newImagePath }),
+      });
+      if (!res.ok) return;
+      const updated = { ...selectedCharacter, image_path: newImagePath };
+      setSelectedCharacter(updated);
+      setCharacters((prev) =>
+        prev.map((c) => (c.id === updated.id ? updated : c))
+      );
+      setShowProfileImagePicker(false);
+    } catch {
+      console.error('Failed to change character image');
     }
   };
 
@@ -1257,11 +1278,20 @@ export default function Home() {
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
             >
               {selectedCharacter.image_path && (
-                <img
-                  src={`${API}${selectedCharacter.image_path}`}
-                  alt={selectedCharacter.name}
-                  className="w-14 h-14 rounded-lg object-cover"
-                />
+                <div
+                  className="relative w-14 h-14 rounded-lg overflow-hidden cursor-pointer group/avatar shrink-0"
+                  onClick={() => setShowProfileImagePicker(true)}
+                  title={t('changeProfileImage')}
+                >
+                  <img
+                    src={`${API}${selectedCharacter.image_path}`}
+                    alt={selectedCharacter.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                    <span className="text-white text-lg">&#9998;</span>
+                  </div>
+                </div>
               )}
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
@@ -2039,6 +2069,66 @@ export default function Home() {
                       </div>
                     </>
                   )}
+                </div>
+              </div>
+            )}
+            {/* Profile image picker modal */}
+            {showProfileImagePicker && (
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                style={{ background: 'rgba(10,10,15,0.85)' }}
+                onClick={() => setShowProfileImagePicker(false)}
+              >
+                <div
+                  className="relative w-full max-w-md max-h-[80vh] rounded-xl animate-fade-in overflow-hidden"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
+                        {t('changeProfileImage')}
+                      </h3>
+                      <button
+                        onClick={() => setShowProfileImagePicker(false)}
+                        className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors"
+                        style={{ color: 'var(--text-muted)' }}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: 'var(--text-muted)' }}>
+                      {t('changeProfileImageDesc')}
+                    </p>
+                  </div>
+                  <div className="p-4 overflow-y-auto max-h-[60vh]">
+                    {portfolioImages.length === 0 ? (
+                      <p className="text-xs text-center py-8" style={{ color: 'var(--text-muted)' }}>
+                        {t('noPortfolioImages')}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {portfolioImages.map((img) => (
+                          <div
+                            key={img.id}
+                            onClick={() => changeCharacterImage(img.file_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all hover:ring-2 hover:ring-[var(--accent)]"
+                            style={{
+                              border: selectedCharacter?.image_path === img.file_path
+                                ? '2px solid var(--accent)'
+                                : '1px solid var(--border)',
+                            }}
+                          >
+                            <img
+                              src={`${API}${img.file_path}`}
+                              alt=""
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             )}
