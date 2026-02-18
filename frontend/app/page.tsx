@@ -2233,11 +2233,12 @@ export default function Home() {
                     {item.media_type === 'image' && (
                       <button
                         onClick={(e) => { e.stopPropagation(); togglePortfolio(item.id, item.is_portfolio); }}
-                        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-sm transition-all"
+                        className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
                         style={{
-                          background: 'rgba(0,0,0,0.6)',
-                          color: item.is_portfolio ? 'var(--accent)' : 'var(--text-muted)',
+                          background: item.is_portfolio ? 'rgba(255,200,0,0.25)' : 'rgba(0,0,0,0.6)',
+                          color: item.is_portfolio ? '#ffc800' : 'rgba(255,255,255,0.4)',
                           backdropFilter: 'blur(4px)',
+                          textShadow: item.is_portfolio ? '0 0 6px rgba(255,200,0,0.5)' : 'none',
                         }}
                         title={item.is_portfolio ? t('removeFromPortfolio') : t('addToPortfolio')}
                       >
