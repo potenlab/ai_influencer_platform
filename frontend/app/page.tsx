@@ -1214,9 +1214,10 @@ export default function Home() {
                     <button
                       onClick={generateImage}
                       disabled={loading || !prompt.trim()}
-                      className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                      className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                       style={{ background: 'var(--accent)', color: '#fff' }}
                     >
+                      {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                       {t('generateImage')}
                     </button>
                     )}
@@ -1303,9 +1304,10 @@ export default function Home() {
                         <button
                           onClick={generateShots}
                           disabled={loading || !selectedShotsImage}
-                          className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                          className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                           style={{ background: 'var(--accent)', color: '#fff' }}
                         >
+                          {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                           {t('generateShots')}
                         </button>
                       </>
@@ -1460,9 +1462,10 @@ export default function Home() {
                           <button
                             onClick={prepareVideo}
                             disabled={loading || !prompt.trim() || (!selectedFirstFrame && !firstFrameUploadFile)}
-                            className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                            className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                             style={{ background: 'var(--accent)', color: '#fff' }}
                           >
+                            {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                             {t('generateVideoPromptBtn')}
                           </button>
                         )}
@@ -1518,9 +1521,10 @@ export default function Home() {
                             <button
                               onClick={finalizeVideo}
                               disabled={loading || !editableVideoPrompt.trim()}
-                              className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                              className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                               style={{ background: 'var(--accent)', color: '#fff' }}
                             >
+                              {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                               {t('generateVideo')}
                             </button>
                           </div>
@@ -1657,9 +1661,10 @@ export default function Home() {
                         <button
                           onClick={generateMotionVideo}
                           disabled={loading || !prompt.trim() || !drivingVideoFile}
-                          className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse"
+                          className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                           style={{ background: 'var(--accent)', color: '#fff' }}
                         >
+                          {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                           {t('generateMotionVideo')}
                         </button>
                       </>
@@ -1880,9 +1885,10 @@ export default function Home() {
                       <button
                         type="submit"
                         disabled={loading}
-                        className="w-full py-3 rounded-lg text-sm font-semibold transition-all"
+                        className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 flex items-center justify-center gap-2"
                         style={{ background: 'var(--accent)', color: '#fff' }}
                       >
+                        {loading && <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: 'rgba(255,255,255,0.3)', borderTopColor: '#fff' }} />}
                         {t('createCharacterBtn')}
                       </button>
                     </form>
