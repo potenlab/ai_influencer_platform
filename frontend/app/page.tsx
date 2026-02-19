@@ -65,8 +65,9 @@ interface VideoJob {
   character_image_path: string;
   prompt: string;
   first_frame_path?: string;
-  result_data?: { media_id?: number; video_path?: string; first_frame_path?: string };
+  result_data?: { media_id?: number; video_path?: string; first_frame_path?: string; file_path?: string };
   error_message?: string;
+  created_at?: string;
 }
 
 export default function Home() {
@@ -217,43 +218,41 @@ export default function Home() {
     }
   };
 
-  // Poll a single job until terminal state
-  const pollJob = useCallback(async (jobId: string) => {
-    const poll = async () => {
+  // Kick-poll for video_final jobs only (triggers backend xAI poll).
+  // State updates come via Realtime, not from this response.
+  const kickPollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
+
+  const kickPollVideoJob = useCallback((jobId: string) => {
+    // Don't start duplicate timers
+    if (kickPollTimers.current[jobId]) return;
+
+    const doKick = async () => {
       try {
         const res = await authFetch(`/api/jobs/${jobId}`);
         if (!res.ok) return;
         const data = await res.json();
-        setVideoJobs((prev) =>
-          prev.map((j) =>
-            j.job_id === jobId
-              ? { ...j, status: data.status, result_data: data.result_data, error_message: data.error_message }
-              : j
-          )
-        );
-        if (data.status === 'completed') {
-          // Always reload history since it's always visible
-          authFetch(`/api/media/history`)
-            .then(r => r.json())
-            .then(d => setHistoryMedia(d))
-            .catch(() => {});
-          setTimeout(() => {
-            setVideoJobs((prev) => prev.filter((j) => j.job_id !== jobId));
-          }, 2000);
-          return; // stop polling
+        // If terminal, stop kicking
+        if (data.status === 'completed' || data.status === 'failed') {
+          clearInterval(kickPollTimers.current[jobId]);
+          delete kickPollTimers.current[jobId];
         }
-        if (data.status === 'failed') {
-          return; // stop polling
-        }
-        // Keep polling
-        setTimeout(poll, 3000);
       } catch {
-        // Retry on network error
-        setTimeout(poll, 5000);
+        // ignore network errors, will retry next interval
       }
     };
-    poll();
+
+    // Kick immediately, then every 15s
+    doKick();
+    kickPollTimers.current[jobId] = setInterval(doKick, 15000);
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Clean up kick-poll timers on unmount
+  useEffect(() => {
+    const timers = kickPollTimers.current;
+    return () => {
+      Object.values(timers).forEach(clearInterval);
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -274,6 +273,87 @@ export default function Home() {
   // Auto-load history on mount
   useEffect(() => {
     if (authReady) loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady]);
+
+  // Restore active jobs on mount (survives page refresh)
+  useEffect(() => {
+    if (!authReady) return;
+    const restoreJobs = async () => {
+      try {
+        const res = await authFetch('/api/jobs');
+        if (!res.ok) return;
+        const jobs: VideoJob[] = await res.json();
+        if (jobs.length === 0) return;
+        setVideoJobs((prev) => {
+          const existingIds = new Set(prev.map((j) => j.job_id));
+          const newJobs = jobs.filter((j) => !existingIds.has(j.job_id));
+          return [...prev, ...newJobs];
+        });
+        // Start kick-poll for any video_final jobs still processing
+        for (const job of jobs) {
+          if (job.job_type === 'video_final' && (job.status === 'pending' || job.status === 'processing')) {
+            kickPollVideoJob(job.job_id);
+          }
+        }
+      } catch {
+        console.error('Failed to restore active jobs');
+      }
+    };
+    restoreJobs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authReady]);
+
+  // Supabase Realtime subscription for job updates
+  useEffect(() => {
+    if (!authReady) return;
+
+    const channel = supabase
+      .channel('jobs-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'jobs' },
+        (payload) => {
+          const updated = payload.new as {
+            id: string;
+            status: string;
+            result_data?: VideoJob['result_data'];
+            error_message?: string;
+          };
+
+          setVideoJobs((prev) => {
+            const exists = prev.find((j) => j.job_id === updated.id);
+            if (!exists) return prev; // job not tracked (already cleaned up)
+            return prev.map((j) =>
+              j.job_id === updated.id
+                ? {
+                    ...j,
+                    status: updated.status as VideoJob['status'],
+                    result_data: updated.result_data,
+                    error_message: updated.error_message,
+                  }
+                : j
+            );
+          });
+
+          if (updated.status === 'completed') {
+            // Reload history to show the new media
+            authFetch('/api/media/history')
+              .then((r) => r.json())
+              .then((d) => setHistoryMedia(d))
+              .catch(() => {});
+            // Auto-remove completed job card after 2s
+            setTimeout(() => {
+              setVideoJobs((prev) => prev.filter((j) => j.job_id !== updated.id));
+            }, 2000);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady]);
 
@@ -512,6 +592,7 @@ export default function Home() {
     clearError();
     setLoading(true);
 
+    // Optimistic skeleton card (will be replaced by real job_id from response)
     const tempJobId = `img-${Date.now()}`;
     setVideoJobs((prev) => [...prev, {
       job_id: tempJobId,
@@ -559,24 +640,23 @@ export default function Home() {
       setGeneratedImage(result.file_path);
       setGeneratedVideo(null);
       setGeneratedFirstFrame(null);
-      // Reload history and mark job completed
+      // Reload history
       authFetch(`/api/media/history`).then(r => r.json()).then(d => setHistoryMedia(d)).catch(() => {});
+      // Realtime will deliver the completed status, but since the route is sync,
+      // mark completed immediately and clean up
       setVideoJobs((prev) => prev.map(j =>
-        j.job_id === tempJobId ? { ...j, status: 'completed' as const } : j
+        j.job_id === tempJobId ? { ...j, job_id: result.job_id || tempJobId, status: 'completed' as const } : j
       ));
       setTimeout(() => {
-        setVideoJobs((prev) => prev.filter(j => j.job_id !== tempJobId));
+        setVideoJobs((prev) => prev.filter(j => j.job_id !== (result.job_id || tempJobId)));
       }, 2000);
     } catch (err: unknown) {
-      if ((err instanceof Error ? err.name : '') === 'AbortError') {
-        setVideoJobs((prev) => prev.map(j =>
-          j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: t('errorTimeout') } : j
-        ));
-      } else {
-        setVideoJobs((prev) => prev.map(j =>
-          j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
-        ));
-      }
+      const errMsg = (err instanceof Error ? err.name : '') === 'AbortError'
+        ? t('errorTimeout')
+        : (err instanceof Error ? err.message : String(err));
+      setVideoJobs((prev) => prev.map(j =>
+        j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: errMsg } : j
+      ));
     } finally {
       setLoading(false);
     }
@@ -617,15 +697,13 @@ export default function Home() {
       setVideoJobs((prev) => [...prev, ...shotJobs]);
       setMobileTab('history');
 
-      // Step 2: Fire-and-forget each shot run
+      // Step 2: Fire-and-forget each shot run (Realtime handles status updates)
       for (const j of result.jobs) {
         authFetch(`${API}/api/generate/shots/run`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ job_id: j.id }),
         }).catch(() => {}); // fire-and-forget
-
-        pollJob(j.id);
       }
 
       // Reset form
@@ -732,7 +810,7 @@ export default function Home() {
       };
       setVideoJobs((prev) => [...prev, newJob]);
       setMobileTab('history');
-      pollJob(result.job_id);
+      kickPollVideoJob(result.job_id);
       // Reset form so user can start a new video immediately
       setVideoPrepareResult(null);
       setEditableVideoPrompt('');
@@ -809,11 +887,10 @@ export default function Home() {
       }
 
       const result = await res.json();
-      // Replace temp job with real job_id for polling
+      // Replace temp job with real job_id (Realtime handles status updates)
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, job_id: result.job_id } : j
       ));
-      pollJob(result.job_id);
     } catch (err: unknown) {
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
