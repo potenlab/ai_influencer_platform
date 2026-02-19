@@ -165,6 +165,7 @@ const translations: Record<Locale, Record<string, string>> = {
     noPortfolioImagesShort: '포트폴리오 이미지가 없습니다',
     tapToSelectSourceImage: '탭하여 소스 이미지 선택',
     sourceImageSelected: '소스 이미지 선택됨',
+    changeAvatar: '프로필 사진 변경',
   },
 
   en: {
@@ -331,6 +332,7 @@ const translations: Record<Locale, Record<string, string>> = {
     noPortfolioImagesShort: 'No portfolio images',
     tapToSelectSourceImage: 'Tap to select source image',
     sourceImageSelected: 'Source image selected',
+    changeAvatar: 'Change Avatar',
   },
 };
 

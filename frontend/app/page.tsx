@@ -114,6 +114,8 @@ export default function Home() {
   const [showFirstFramePicker, setShowFirstFramePicker] = useState(false);
   const [showMotionImagePicker, setShowMotionImagePicker] = useState(false);
   const [showShotsImagePicker, setShowShotsImagePicker] = useState(false);
+  const [showAvatarPicker, setShowAvatarPicker] = useState(false);
+  const [avatarImages, setAvatarImages] = useState<HistoryMedia[]>([]);
 
   // Video prepare states
   const [videoPrepareResult, setVideoPrepareResult] = useState<VideoPrepareResult | null>(null);
@@ -143,6 +145,7 @@ export default function Home() {
   const videoInputRef = useRef<HTMLInputElement>(null);
   const charImageInputRef = useRef<HTMLInputElement>(null);
   const firstFrameInputRef = useRef<HTMLInputElement>(null);
+  const editAvatarInputRef = useRef<HTMLInputElement>(null);
   const rightPanelRef = useRef<HTMLDivElement>(null);
 
   // Character image preview URL
@@ -424,6 +427,20 @@ export default function Home() {
     }
   };
 
+  const loadAvatarImages = async (characterId: string) => {
+    try {
+      const params = new URLSearchParams({
+        character_id: characterId,
+        media_type: 'image',
+      });
+      const res = await authFetch(`${API}/api/media/history?${params.toString()}`);
+      const data = await res.json();
+      setAvatarImages(data);
+    } catch {
+      console.error('Failed to load avatar images');
+    }
+  };
+
   const loadReferenceImages = async (characterId: string) => {
     try {
       const params = new URLSearchParams({
@@ -562,6 +579,51 @@ export default function Home() {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const updateCharacterAvatar = async (fileOrPath: File | string) => {
+    if (!selectedCharacter) return;
+    clearError();
+    setLoading(true);
+
+    try {
+      let imagePath: string;
+
+      if (typeof fileOrPath === 'string') {
+        // Existing image path selected from picker
+        imagePath = fileOrPath;
+      } else {
+        // Upload new file
+        const formData = new FormData();
+        formData.append('file', fileOrPath);
+        const uploadRes = await authFetch(`${API}/api/upload/image`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) throw new Error(await safeErrorJson(uploadRes));
+        const { web_path } = await uploadRes.json();
+        imagePath = web_path;
+      }
+
+      // Update character's image_path
+      const patchRes = await authFetch(`${API}/api/characters/${selectedCharacter.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ image_path: imagePath }),
+      });
+      if (!patchRes.ok) throw new Error(await safeErrorJson(patchRes));
+      const updatedCharacter = await patchRes.json();
+
+      // Update local state
+      setSelectedCharacter(updatedCharacter);
+      setCharacters(prev => prev.map(c => c.id === updatedCharacter.id ? updatedCharacter : c));
+      setShowAvatarPicker(false);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setLoading(false);
+      if (editAvatarInputRef.current) editAvatarInputRef.current.value = '';
     }
   };
 
@@ -921,6 +983,7 @@ export default function Home() {
     setShowFirstFramePicker(false);
     setShowMotionImagePicker(false);
     setShowShotsImagePicker(false);
+    setShowAvatarPicker(false);
     loadPortfolioImages(char.id);
     loadReferenceImages(char.id);
   };
@@ -1059,20 +1122,33 @@ export default function Home() {
             >
               {selectedCharacter ? (
                 <>
-                  {selectedCharacter.image_path ? (
-                    <img
-                      src={`${API}${selectedCharacter.image_path}`}
-                      alt={selectedCharacter.name}
-                      className="w-10 h-10 rounded-lg object-cover shrink-0"
-                    />
-                  ) : (
-                    <div
-                      className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium shrink-0"
-                      style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
+                  <div className="relative shrink-0">
+                    {selectedCharacter.image_path ? (
+                      <img
+                        src={`${API}${selectedCharacter.image_path}`}
+                        alt={selectedCharacter.name}
+                        className="w-10 h-10 rounded-lg object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-10 h-10 rounded-lg flex items-center justify-center text-sm font-medium"
+                        style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
+                      >
+                        {selectedCharacter.name[0]}
+                      </div>
+                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); loadAvatarImages(selectedCharacter.id); setShowAvatarPicker(true); }}
+                      className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
+                      style={{ background: 'var(--accent)', color: '#fff', border: '2px solid var(--bg-card)' }}
+                      title="Edit avatar"
                     >
-                      {selectedCharacter.name[0]}
-                    </div>
-                  )}
+                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                    </button>
+                  </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm" style={{ color: 'var(--text-primary)' }}>
                       {selectedCharacter.name}
@@ -2421,6 +2497,96 @@ export default function Home() {
                             <img
                               src={`${API}${img.file_path}`}
                               alt={img.prompt || 'Portfolio'}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Avatar Picker side panel */}
+          {showAvatarPicker && (
+            <>
+              {/* Backdrop */}
+              <div
+                className="fixed inset-0 z-20 lg:bg-transparent"
+                style={{ background: 'rgba(0,0,0,0.5)' }}
+                onClick={() => setShowAvatarPicker(false)}
+              />
+
+              {/* Panel */}
+              <div
+                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
+                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
+              >
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
+                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {t('changeAvatar')}
+                  </h3>
+                  <button
+                    onClick={() => setShowAvatarPicker(false)}
+                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
+                    style={{ color: 'var(--text-muted)' }}
+                  >
+                    &times;
+                  </button>
+                </div>
+
+                {/* Body */}
+                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                  {/* Upload new button */}
+                  <label
+                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm font-medium transition-all"
+                    style={{ background: 'var(--bg-card)', border: '2px dashed var(--border)', color: 'var(--text-secondary)' }}
+                  >
+                    <input
+                      ref={editAvatarInputRef}
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      className="sr-only"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) updateCharacterAvatar(file);
+                      }}
+                    />
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    {t('uploadNewImage')}
+                  </label>
+
+                  {/* Character images grid */}
+                  <div>
+                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
+                      {selectedCharacter?.name}
+                    </span>
+                    {avatarImages.length === 0 ? (
+                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
+                        {t('noPortfolioImagesShort')}
+                      </p>
+                    ) : (
+                      <div className="grid grid-cols-3 gap-2">
+                        {avatarImages.map((img) => (
+                          <div
+                            key={img.id}
+                            onClick={() => updateCharacterAvatar(img.file_path)}
+                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
+                            style={{
+                              border: selectedCharacter?.image_path === img.file_path
+                                ? '2px solid var(--accent)'
+                                : '2px solid transparent',
+                            }}
+                          >
+                            <img
+                              src={`${API}${img.file_path}`}
+                              alt={img.prompt || 'Generated'}
                               className="w-full h-full object-cover"
                             />
                           </div>

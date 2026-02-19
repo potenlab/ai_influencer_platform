@@ -28,6 +28,42 @@ export async function GET(
   }
 }
 
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAuth(request);
+    const { id } = await params;
+    const { image_path } = await request.json();
+
+    // Verify character belongs to user
+    const { data: character, error: fetchError } = await supabaseAdmin
+      .from('characters')
+      .select('id')
+      .eq('id', id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !character) {
+      return NextResponse.json({ error: 'Character not found' }, { status: 404 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from('characters')
+      .update({ image_path })
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return NextResponse.json(data);
+  } catch (error: unknown) {
+    return handleError(error);
+  }
+}
+
 export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
