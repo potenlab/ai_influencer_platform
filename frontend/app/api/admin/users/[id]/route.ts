@@ -24,7 +24,7 @@ export async function DELETE(
     if (error) throw new Error(error.message);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

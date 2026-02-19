@@ -51,7 +51,7 @@ export async function xaiSubmitVideo(
   duration: number,
   imageUrl?: string
 ): Promise<string> {
-  const body: Record<string, any> = {
+  const body: Record<string, unknown> = {
     model: 'grok-imagine-video',
     prompt,
     duration: Math.min(duration, 15),

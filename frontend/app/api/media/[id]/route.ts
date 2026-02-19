@@ -40,7 +40,7 @@ export async function PATCH(
     if (updateError) throw new Error(updateError.message);
 
     return NextResponse.json({ success: true, is_portfolio });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }
@@ -73,7 +73,7 @@ export async function DELETE(
     if (deleteError) throw new Error(deleteError.message);
 
     return NextResponse.json({ success: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

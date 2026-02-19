@@ -58,6 +58,7 @@ export async function GET(request: Request) {
     if (error) throw new Error(error.message);
 
     // Flatten joined data to match frontend HistoryMedia interface
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const flattened = (data || []).map((row: any) => {
       const char = row.characters || {};
       const plan = row.content_plans || {};
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json(flattened);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

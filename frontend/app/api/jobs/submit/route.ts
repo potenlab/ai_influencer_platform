@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     const webhookUrl = getWebhookUrl();
 
     let falModel: string;
-    let falInput: Record<string, any>;
+    let falInput: Record<string, unknown>;
 
     if (job_type === 'video_final') {
       const { first_frame_path, video_prompt, concept } = params;
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
       .eq('id', jobId);
 
     return NextResponse.json({ job_id: jobId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

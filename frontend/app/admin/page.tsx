@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '../supabaseClient';
 
@@ -29,7 +29,7 @@ export default function AdminPage() {
     return data.session?.access_token || '';
   };
 
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     try {
       const token = await getToken();
       const res = await fetch(`${API}/api/admin/users`, {
@@ -48,16 +48,16 @@ export default function AdminPage() {
 
       const data = await res.json();
       setUsers(data);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
-  };
+  }, [router]);
 
   useEffect(() => {
     fetchUsers();
-  }, []);
+  }, [fetchUsers]);
 
   const createUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,8 +85,8 @@ export default function AdminPage() {
       setNewRole('user');
       setShowCreateForm(false);
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setCreating(false);
     }
@@ -108,8 +108,8 @@ export default function AdminPage() {
       }
 
       fetchUsers();
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     }
   };
 

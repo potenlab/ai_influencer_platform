@@ -72,7 +72,7 @@ interface VideoJob {
 export default function Home() {
   const router = useRouter();
   const [authReady, setAuthReady] = useState(false);
-  const [userEmail, setUserEmail] = useState('');
+  const [, setUserEmail] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
@@ -253,6 +253,7 @@ export default function Home() {
       }
     };
     poll();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleLogout = async () => {
@@ -267,11 +268,13 @@ export default function Home() {
 
   useEffect(() => {
     if (authReady) loadCharacters();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady]);
 
   // Auto-load history on mount
   useEffect(() => {
     if (authReady) loadHistory();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authReady]);
 
   // Preview reference image
@@ -452,8 +455,8 @@ export default function Home() {
       setShowCharacterPicker(false);
       await loadCharacters();
       setSelectedCharacter(newChar);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -478,8 +481,8 @@ export default function Home() {
       if (selectedCharacter?.id === characterId) {
         setSelectedCharacter(null);
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -564,14 +567,14 @@ export default function Home() {
       setTimeout(() => {
         setVideoJobs((prev) => prev.filter(j => j.job_id !== tempJobId));
       }, 2000);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (err: unknown) {
+      if ((err instanceof Error ? err.name : '') === 'AbortError') {
         setVideoJobs((prev) => prev.map(j =>
           j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: t('errorTimeout') } : j
         ));
       } else {
         setVideoJobs((prev) => prev.map(j =>
-          j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: err.message } : j
+          j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
         ));
       }
     } finally {
@@ -627,8 +630,8 @@ export default function Home() {
 
       // Reset form
       setSelectedShotsImage(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -684,11 +687,11 @@ export default function Home() {
       setVideoPrepareResult(result);
       setEditableVideoPrompt(result.video_prompt);
       setGeneratedFirstFrame(result.first_frame_path);
-    } catch (err: any) {
-      if (err.name === 'AbortError') {
+    } catch (err: unknown) {
+      if ((err instanceof Error ? err.name : '') === 'AbortError') {
         setError(t('errorTimeout'));
       } else {
-        setError(err.message);
+        setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
       setLoading(false);
@@ -738,8 +741,8 @@ export default function Home() {
       setGeneratedFirstFrame(null);
       setSelectedFirstFrame(null);
       setFirstFrameUploadFile(null);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
@@ -811,9 +814,9 @@ export default function Home() {
         j.job_id === tempJobId ? { ...j, job_id: result.job_id } : j
       ));
       pollJob(result.job_id);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setVideoJobs((prev) => prev.map(j =>
-        j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: err.message } : j
+        j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
       ));
     } finally {
       setLoading(false);

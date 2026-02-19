@@ -1,3 +1,28 @@
+interface CharacterInfo {
+  name: string;
+  personality_traits?: string[];
+  tone_of_voice?: string;
+  content_style?: string;
+}
+
+interface CharacterPersonality {
+  archetype: string;
+  personality_traits: string[];
+  tone_of_voice: string;
+  content_style: string;
+  content_themes: string[];
+  visual_description: string;
+}
+
+interface ContentPlan {
+  title: string;
+  hook: string;
+  duration_seconds: number;
+  first_frame_prompt: string;
+  video_prompt: string;
+  call_to_action: string;
+}
+
 function getModel(): string {
   return process.env.OPENROUTER_MODEL || 'google/gemini-2.5-flash';
 }
@@ -85,7 +110,7 @@ Return ONLY the descriptive text, no explanations or prefixes. Keep it under 200
   );
 }
 
-function extractJson(content: string): any {
+function extractJson(content: string): unknown {
   const match = content.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (match) content = match[1];
   return JSON.parse(content);
@@ -94,7 +119,7 @@ function extractJson(content: string): any {
 export async function generateCharacterPersonality(
   concept: string,
   audience: string
-) {
+): Promise<CharacterPersonality> {
   const prompt = `Create a detailed personality profile for an AI influencer character.
 
 Concept: ${concept}
@@ -118,10 +143,10 @@ Return only valid JSON.`;
     0.8
   );
 
-  return extractJson(content);
+  return extractJson(content) as CharacterPersonality;
 }
 
-export async function generateContentPlan(character: any, theme: string) {
+export async function generateContentPlan(character: CharacterInfo, theme: string): Promise<ContentPlan> {
   const prompt = `Create a SHORT-FORM VIDEO content plan for this character:
 
 Character: ${character.name}
@@ -153,11 +178,11 @@ Return only valid JSON.`;
     0.7
   );
 
-  return extractJson(content);
+  return extractJson(content) as ContentPlan;
 }
 
 export async function generateVideoPrompt(
-  character: any,
+  character: CharacterInfo,
   concept: string,
   spicy = false
 ): Promise<string> {
@@ -215,7 +240,7 @@ Example format: ["prompt 1", "prompt 2", ...]`;
     0.8
   );
 
-  return extractJson(content);
+  return extractJson(content) as string[];
 }
 
 export async function determineVideoDuration(

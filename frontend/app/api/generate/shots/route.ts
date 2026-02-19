@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ jobs });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

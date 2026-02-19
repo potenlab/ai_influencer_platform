@@ -43,7 +43,7 @@ export async function POST(request: Request) {
 
       // Build media record based on job type
       const inputData = job.input_data || {};
-      const mediaRecord: Record<string, any> = {
+      const mediaRecord: Record<string, unknown> = {
         character_id: job.character_id,
         user_id: job.user_id,
         media_type: 'video',
@@ -99,8 +99,8 @@ export async function POST(request: Request) {
     }
 
     return NextResponse.json({ ok: true });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Webhook error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
   }
 }

@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       file_path: publicUrl,
       web_path: publicUrl,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

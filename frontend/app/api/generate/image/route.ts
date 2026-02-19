@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       media_id: media.id,
       file_path: publicUrl,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

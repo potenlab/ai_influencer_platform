@@ -14,6 +14,6 @@ export function getSupabaseAdmin(): SupabaseClient {
 // For backward compatibility
 export const supabaseAdmin = new Proxy({} as SupabaseClient, {
   get(_, prop) {
-    return (getSupabaseAdmin() as any)[prop];
+    return (getSupabaseAdmin() as unknown as Record<string | symbol, unknown>)[prop];
   },
 });

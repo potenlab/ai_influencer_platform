@@ -42,7 +42,7 @@ export async function POST(request: Request) {
       first_frame_path: first_frame_path,
       video_prompt: videoPrompt,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

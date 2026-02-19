@@ -79,20 +79,21 @@ export async function POST(request: Request) {
         .eq('id', job_id);
 
       return NextResponse.json({ status: 'completed', media_id: media?.id, file_path: publicUrl });
-    } catch (genError: any) {
+    } catch (genError: unknown) {
       // Mark job as failed
+      const errorMessage = genError instanceof Error ? genError.message : 'Shot generation failed';
       await supabaseAdmin
         .from('jobs')
         .update({
           status: 'failed',
-          error_message: genError.message || 'Shot generation failed',
+          error_message: errorMessage,
           updated_at: new Date().toISOString(),
         })
         .eq('id', job_id);
 
-      return NextResponse.json({ status: 'failed', error: genError.message }, { status: 500 });
+      return NextResponse.json({ status: 'failed', error: errorMessage }, { status: 500 });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

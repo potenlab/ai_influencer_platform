@@ -67,7 +67,7 @@ export async function POST(request: Request) {
       .eq('id', jobId);
 
     return NextResponse.json({ job_id: jobId });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

@@ -26,7 +26,7 @@ export async function GET(request: Request) {
     if (error) throw new Error(error.message);
 
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
     if (error) throw new Error(error.message);
 
     return NextResponse.json(data, { status: 201 });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

@@ -22,9 +22,10 @@ export async function generateCharacterImage(prompt: string, spicy = false): Pro
   }
   ensureFalConfig();
   const result = await fal.run('fal-ai/nano-banana-pro', {
-    input: { prompt: styledPrompt, image_size: 'square_hd', num_images: 1 } as any,
+    input: { prompt: styledPrompt, aspect_ratio: '1:1', num_images: 1 },
   });
-  return (result as any).data.images[0].url;
+  const data = result as { data: { images: { url: string }[] } };
+  return data.data.images[0].url;
 }
 
 export async function generateShotImage(
@@ -39,14 +40,16 @@ export async function generateShotImage(
   }
 
   ensureFalConfig();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {
       prompt: styledPrompt,
       image_urls: [sourceImageUrl],
       num_images: 1,
-    } as any,
+    } as Record<string, unknown>,
   });
-  return (result as any).data.images[0].url;
+  const data = result as { data: { images: { url: string }[] } };
+  return data.data.images[0].url;
 }
 
 export async function generateSceneImage(
@@ -63,6 +66,7 @@ export async function generateSceneImage(
 
   // Reference image or mild: always fal.ai nano-banana-pro/edit
   ensureFalConfig();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const result = await fal.run('fal-ai/nano-banana-pro/edit' as any, {
     input: {
       prompt: styledPrompt,
@@ -70,7 +74,8 @@ export async function generateSceneImage(
       num_images: 1,
       aspect_ratio: '9:16',
       resolution: '2K',
-    } as any,
+    } as Record<string, unknown>,
   });
-  return (result as any).data.images[0].url;
+  const data = result as { data: { images: { url: string }[] } };
+  return data.data.images[0].url;
 }

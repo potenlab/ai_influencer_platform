@@ -71,7 +71,7 @@ export async function GET(
           const videoPath = await uploadMediaFromUrl(poll.videoUrl, 'videos', 'mp4');
 
           const inputData = job.input_data || {};
-          const mediaRecord: Record<string, any> = {
+          const mediaRecord: Record<string, unknown> = {
             character_id: job.character_id,
             user_id: job.user_id,
             media_type: 'video',
@@ -122,8 +122,8 @@ export async function GET(
             updated_at: new Date().toISOString(),
           });
         }
-      } catch (pollErr: any) {
-        console.error('xAI poll error:', pollErr.message);
+      } catch (pollErr: unknown) {
+        console.error('xAI poll error:', pollErr instanceof Error ? pollErr.message : pollErr);
         // Don't fail the request, just return current DB state
       }
     }
@@ -137,7 +137,7 @@ export async function GET(
       created_at: job.created_at,
       updated_at: job.updated_at,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     return handleError(error);
   }
 }

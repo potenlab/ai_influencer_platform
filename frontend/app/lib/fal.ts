@@ -37,20 +37,22 @@ export async function falPollVideo(
     const queueStatus = await fal.queue.status(endpointId, { requestId });
     if (queueStatus.status === 'COMPLETED') {
       const result = await fal.queue.result(endpointId, { requestId });
-      const videoUrl = (result.data as any)?.video?.url;
+      const data = result.data as Record<string, unknown>;
+      const video = data?.video as Record<string, unknown> | undefined;
+      const videoUrl = video?.url as string | undefined;
       return videoUrl
         ? { status: 'done', videoUrl }
         : { status: 'failed', error: 'No video URL in FAL result' };
     }
     return { status: 'processing' };
-  } catch (err: any) {
-    return { status: 'failed', error: err.message || 'FAL poll error' };
+  } catch (err: unknown) {
+    return { status: 'failed', error: (err instanceof Error ? err.message : String(err)) || 'FAL poll error' };
   }
 }
 
 export async function submitVideoToQueue(
   model: string,
-  input: Record<string, any>,
+  input: Record<string, unknown>,
   webhookUrl: string
 ): Promise<QueueSubmitResult> {
   ensureConfig();
