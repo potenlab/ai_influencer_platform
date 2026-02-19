@@ -48,6 +48,11 @@ export async function GET(request: Request) {
       query = query.eq('is_portfolio', false);
     }
 
+    const hasReferenceImage = searchParams.get('has_reference_image');
+    if (hasReferenceImage === 'true') {
+      query = query.not('reference_image_path', 'is', null);
+    }
+
     const { data, error } = await query;
 
     if (error) throw new Error(error.message);
