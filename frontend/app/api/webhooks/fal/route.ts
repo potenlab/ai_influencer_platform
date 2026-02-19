@@ -23,6 +23,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Job not found' }, { status: 404 });
     }
 
+    // Skip if job was already completed by polling
+    if (job.status === 'completed') {
+      return NextResponse.json({ ok: true });
+    }
+
     if (status === 'OK' && payload) {
       // Extract video URL from FAL result
       const videoUrl = payload?.video?.url;

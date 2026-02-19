@@ -38,7 +38,7 @@ export async function GET(
       });
     }
 
-    // If still processing, poll xAI for status
+    // If still processing, poll for status
     if (job.status === 'processing' && job.fal_request_id) {
       try {
         const poll = job.job_type === 'video_motion'
@@ -67,6 +67,25 @@ export async function GET(
         }
 
         if (poll.status === 'done' && poll.videoUrl) {
+          // Re-read job to check if webhook already completed it (avoid duplicate media)
+          const { data: freshJob } = await supabaseAdmin
+            .from('jobs')
+            .select('status, result_data')
+            .eq('id', job.id)
+            .single();
+
+          if (freshJob?.status === 'completed') {
+            return NextResponse.json({
+              id: job.id,
+              job_type: job.job_type,
+              status: 'completed',
+              result_data: freshJob.result_data,
+              error_message: null,
+              created_at: job.created_at,
+              updated_at: new Date().toISOString(),
+            });
+          }
+
           // Upload video to Supabase Storage
           const videoPath = await uploadMediaFromUrl(poll.videoUrl, 'videos', 'mp4');
 
@@ -123,7 +142,7 @@ export async function GET(
           });
         }
       } catch (pollErr: unknown) {
-        console.error('xAI poll error:', pollErr instanceof Error ? pollErr.message : pollErr);
+        console.error('Poll error:', pollErr instanceof Error ? pollErr.message : pollErr);
         // Don't fail the request, just return current DB state
       }
     }

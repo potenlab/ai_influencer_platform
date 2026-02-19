@@ -290,9 +290,9 @@ export default function Home() {
           const newJobs = jobs.filter((j) => !existingIds.has(j.job_id));
           return [...prev, ...newJobs];
         });
-        // Start kick-poll for any video_final jobs still processing
+        // Start kick-poll for any video jobs still processing
         for (const job of jobs) {
-          if (job.job_type === 'video_final' && (job.status === 'pending' || job.status === 'processing')) {
+          if ((job.job_type === 'video_final' || job.job_type === 'video_motion') && (job.status === 'pending' || job.status === 'processing')) {
             kickPollVideoJob(job.job_id);
           }
         }
@@ -944,10 +944,12 @@ export default function Home() {
       }
 
       const result = await res.json();
-      // Replace temp job with real job_id (Realtime handles status updates)
+      // Replace temp job with real job_id
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, job_id: result.job_id } : j
       ));
+      // Start kick-poll as fallback in case webhook doesn't arrive
+      kickPollVideoJob(result.job_id);
     } catch (err: unknown) {
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
