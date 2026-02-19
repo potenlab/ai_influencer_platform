@@ -3,6 +3,7 @@ import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
 import { generateSceneImage } from '@/app/lib/image-gen';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
+import { uploadToFalStorage } from '@/app/lib/fal';
 import { handleError } from '@/app/lib/api-utils';
 
 export const maxDuration = 300;
@@ -48,11 +49,13 @@ export async function POST(request: Request) {
     });
 
     try {
-      // Build image URLs array
-      const imageUrls = [character.image_path];
+      // Build image URLs array and re-upload to FAL storage
+      // (FAL.ai cannot reliably fetch from Supabase storage URLs directly)
+      const rawUrls = [character.image_path];
       if (option === 'ref_image' && reference_image_path) {
-        imageUrls.push(reference_image_path);
+        rawUrls.push(reference_image_path);
       }
+      const imageUrls = await Promise.all(rawUrls.map(uploadToFalStorage));
 
       // Generate scene image
       console.log('[generate/image] imageUrls:', imageUrls.length, 'option:', option);

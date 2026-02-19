@@ -3,6 +3,7 @@ import { requireAuth } from '@/app/lib/auth';
 import { supabaseAdmin } from '@/app/lib/supabase-server';
 import { generateShotImage } from '@/app/lib/image-gen';
 import { uploadMediaFromUrl } from '@/app/lib/storage';
+import { uploadToFalStorage } from '@/app/lib/fal';
 import { handleError } from '@/app/lib/api-utils';
 
 export const maxDuration = 300;
@@ -43,8 +44,12 @@ export async function POST(request: Request) {
     const { prompt, source_image_path, spicy } = inputData;
 
     try {
+      // Re-upload source image to FAL storage
+      // (FAL.ai cannot reliably fetch from Supabase storage URLs directly)
+      const falSourceUrl = await uploadToFalStorage(source_image_path);
+
       // Generate the shot image
-      const resultUrl = await generateShotImage(prompt, source_image_path, !!spicy);
+      const resultUrl = await generateShotImage(prompt, falSourceUrl, !!spicy);
 
       // Upload to storage
       const publicUrl = await uploadMediaFromUrl(resultUrl, 'images', 'png');
