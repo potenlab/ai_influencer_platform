@@ -77,8 +77,6 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [characters, setCharacters] = useState<Character[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<Character | null>(null);
-  const [generatedImage, setGeneratedImage] = useState<string | null>(null);
-  const [generatedVideo, setGeneratedVideo] = useState<string | null>(null);
   const [generatedFirstFrame, setGeneratedFirstFrame] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -141,7 +139,6 @@ export default function Home() {
   const [locale, setLocale] = useState<Locale>('ko');
   const t = (key: string) => translations[locale][key] || key;
 
-  const videoRef = useRef<HTMLVideoElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
   const videoInputRef = useRef<HTMLInputElement>(null);
   const charImageInputRef = useRef<HTMLInputElement>(null);
@@ -379,12 +376,12 @@ export default function Home() {
     }
   }, [firstFrameUploadFile]);
 
-  // Auto-scroll right panel on new results
+  // Auto-scroll right panel on new history items
   useEffect(() => {
-    if ((generatedImage || generatedVideo) && rightPanelRef.current) {
+    if (historyMedia.length > 0 && rightPanelRef.current) {
       rightPanelRef.current.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }, [generatedImage, generatedVideo]);
+  }, [historyMedia]);
 
   const loadCharacters = async () => {
     try {
@@ -637,13 +634,12 @@ export default function Home() {
       }
 
       const result = await res.json();
-      setGeneratedImage(result.file_path);
-      setGeneratedVideo(null);
+      // Don't show result inline — just reload history and switch to history tab
       setGeneratedFirstFrame(null);
-      // Reload history
+      // Reload history to show the new media
       authFetch(`/api/media/history`).then(r => r.json()).then(d => setHistoryMedia(d)).catch(() => {});
-      // Realtime will deliver the completed status, but since the route is sync,
-      // mark completed immediately and clean up
+      setMobileTab('history');
+      // Mark job completed and clean up
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, job_id: result.job_id || tempJobId, status: 'completed' as const } : j
       ));
@@ -850,7 +846,6 @@ export default function Home() {
     setDrivingVideoFile(null);
     setSelectedMotionImage(null);
     if (videoInputRef.current) videoInputRef.current.value = '';
-    setGeneratedImage(null);
     setGeneratedFirstFrame(null);
 
     try {
@@ -913,8 +908,6 @@ export default function Home() {
 
   const selectCharacterAndProceed = (char: Character) => {
     setSelectedCharacter(char);
-    setGeneratedImage(null);
-    setGeneratedVideo(null);
     setGeneratedFirstFrame(null);
     setVideoPrepareResult(null);
     setEditableVideoPrompt('');
@@ -933,8 +926,6 @@ export default function Home() {
   };
 
   const resetGenerate = () => {
-    setGeneratedImage(null);
-    setGeneratedVideo(null);
     setGeneratedFirstFrame(null);
     setVideoPrepareResult(null);
     setEditableVideoPrompt('');
@@ -2503,79 +2494,6 @@ export default function Home() {
                 >
                   {t('close')}
                 </button>
-              </div>
-            )}
-
-            {/* Generation Results */}
-            {(generatedImage || generatedVideo) && (
-              <div className="animate-fade-in">
-                <h3 className="text-lg font-bold mb-4" style={{ color: 'var(--text-primary)' }}>
-                  {t('results')}
-                </h3>
-
-                <div className="space-y-4">
-                  {/* Image result */}
-                  {generatedImage && !generatedVideo && (
-                    <div
-                      className="rounded-xl overflow-hidden"
-                      style={{ border: '1px solid var(--border)' }}
-                    >
-                      <div className="px-4 py-2" style={{ background: 'var(--bg-card)' }}>
-                        <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                          {t('generatedImage')}
-                        </span>
-                      </div>
-                      <img
-                        src={`${API}${generatedImage}`}
-                        alt="Generated image"
-                        className="w-full"
-                      />
-                    </div>
-                  )}
-
-                  {/* Video result */}
-                  {generatedVideo && (
-                    <>
-                      {generatedFirstFrame && !videoPrepareResult && (
-                        <div
-                          className="rounded-xl overflow-hidden"
-                          style={{ border: '1px solid var(--border)' }}
-                        >
-                          <div className="px-4 py-2" style={{ background: 'var(--bg-card)' }}>
-                            <span className="text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
-                              {t('startFrame')}
-                            </span>
-                          </div>
-                          <img
-                            src={`${API}${generatedFirstFrame}`}
-                            alt="First frame"
-                            className="w-full"
-                          />
-                        </div>
-                      )}
-                      <div
-                        className="rounded-xl overflow-hidden"
-                        style={{ border: '1px solid var(--accent)' }}
-                      >
-                        <div className="px-4 py-2" style={{ background: 'var(--bg-card)' }}>
-                          <span className="text-xs font-medium" style={{ color: 'var(--accent-light)' }}>
-                            {t('generatedVideo')}
-                          </span>
-                        </div>
-                        <video
-                          ref={videoRef}
-                          controls
-                          autoPlay
-                          loop
-                          className="w-full"
-                          src={`${API}${generatedVideo}`}
-                        >
-                          {t('videoNotPlayable')}
-                        </video>
-                      </div>
-                    </>
-                  )}
-                </div>
               </div>
             )}
 
