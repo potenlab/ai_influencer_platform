@@ -93,14 +93,37 @@ export async function POST(request: Request) {
     } else {
       // FAL error
       const errorMsg = falError || body?.error_message || 'Unknown FAL error';
+      const errStr = typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg);
       await supabaseAdmin
         .from('jobs')
         .update({
           status: 'failed',
-          error_message: typeof errorMsg === 'string' ? errorMsg : JSON.stringify(errorMsg),
+          error_message: errStr,
           updated_at: new Date().toISOString(),
         })
         .eq('id', job.id);
+
+      // Insert failed media record so it persists in history
+      const inputData = job.input_data || {};
+      const failedMediaRecord: Record<string, unknown> = {
+        character_id: job.character_id,
+        user_id: job.user_id,
+        media_type: 'video',
+        file_path: null,
+        status: 'failed',
+        error_message: errStr,
+        created_at: new Date().toISOString(),
+      };
+      if (job.job_type === 'video_final') {
+        failedMediaRecord.generation_mode = 'video';
+        failedMediaRecord.prompt = inputData.concept;
+        failedMediaRecord.video_prompt = inputData.video_prompt;
+        failedMediaRecord.first_frame_path = inputData.first_frame_path;
+      } else if (job.job_type === 'video_motion') {
+        failedMediaRecord.generation_mode = 'motion_control';
+        failedMediaRecord.prompt = inputData.prompt;
+      }
+      await supabaseAdmin.from('media').insert(failedMediaRecord);
     }
 
     return NextResponse.json({ ok: true });

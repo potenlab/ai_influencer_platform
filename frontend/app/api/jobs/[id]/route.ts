@@ -46,21 +46,44 @@ export async function GET(
           : await xaiPollVideo(job.fal_request_id);
 
         if (poll.status === 'failed') {
+          const errMsg = poll.error || 'Video generation failed';
           await supabaseAdmin
             .from('jobs')
             .update({
               status: 'failed',
-              error_message: poll.error || 'Video generation failed',
+              error_message: errMsg,
               updated_at: new Date().toISOString(),
             })
             .eq('id', job.id);
+
+          // Insert failed media record so it persists in history
+          const inputData = job.input_data || {};
+          const failedMediaRecord: Record<string, unknown> = {
+            character_id: job.character_id,
+            user_id: job.user_id,
+            media_type: 'video',
+            file_path: null,
+            status: 'failed',
+            error_message: errMsg,
+            created_at: new Date().toISOString(),
+          };
+          if (job.job_type === 'video_final') {
+            failedMediaRecord.generation_mode = 'video';
+            failedMediaRecord.prompt = inputData.concept;
+            failedMediaRecord.video_prompt = inputData.video_prompt;
+            failedMediaRecord.first_frame_path = inputData.first_frame_path;
+          } else if (job.job_type === 'video_motion') {
+            failedMediaRecord.generation_mode = 'motion_control';
+            failedMediaRecord.prompt = inputData.prompt;
+          }
+          await supabaseAdmin.from('media').insert(failedMediaRecord);
 
           return NextResponse.json({
             id: job.id,
             job_type: job.job_type,
             status: 'failed',
             result_data: null,
-            error_message: poll.error || 'Video generation failed',
+            error_message: errMsg,
             created_at: job.created_at,
             updated_at: new Date().toISOString(),
           });

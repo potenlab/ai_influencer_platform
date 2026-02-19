@@ -110,6 +110,20 @@ export async function POST(request: Request) {
         })
         .eq('id', jobId);
 
+      // Insert failed media record so it persists in history
+      await supabaseAdmin.from('media').insert({
+        character_id,
+        user_id: user.id,
+        media_type: 'image',
+        file_path: null,
+        generation_mode: option,
+        prompt,
+        reference_image_path: reference_image_path || null,
+        status: 'failed',
+        error_message: errMsg,
+        created_at: new Date().toISOString(),
+      });
+
       throw innerError;
     }
   } catch (error: unknown) {

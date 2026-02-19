@@ -16,6 +16,9 @@ export async function xaiImageGenerate(prompt: string, aspectRatio = '1:1'): Pro
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (typeof err?.error === 'string' && err.error.toLowerCase().includes('content moderation')) {
+      throw new Error('Generated image rejected by content moderation.');
+    }
     throw new Error(`xAI image error ${res.status}: ${JSON.stringify(err)}`);
   }
   const data = await res.json();
@@ -38,6 +41,9 @@ export async function xaiImageEdit(prompt: string, imageUrl: string): Promise<st
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (typeof err?.error === 'string' && err.error.toLowerCase().includes('content moderation')) {
+      throw new Error('Generated image rejected by content moderation.');
+    }
     throw new Error(`xAI image edit error ${res.status}: ${JSON.stringify(err)}`);
   }
   const data = await res.json();
@@ -72,6 +78,9 @@ export async function xaiSubmitVideo(
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
+    if (typeof err?.error === 'string' && err.error.toLowerCase().includes('content moderation')) {
+      throw new Error('Generated image rejected by content moderation.');
+    }
     throw new Error(`xAI video submit error ${res.status}: ${JSON.stringify(err)}`);
   }
   const data = await res.json();

@@ -36,6 +36,8 @@ interface HistoryMedia {
   first_frame_path: string | null;
   reference_image_path: string | null;
   is_portfolio: boolean;
+  status: 'completed' | 'failed';
+  error_message: string | null;
   // legacy plan fields
   plan_title: string | null;
   plan_theme: string | null;
@@ -126,6 +128,7 @@ export default function Home() {
 
   // History states
   const [historyMedia, setHistoryMedia] = useState<HistoryMedia[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
   const [historyCharFilter, setHistoryCharFilter] = useState<string>('');
   const [historyMediaTypeFilter, setHistoryMediaTypeFilter] = useState<string>('');
   const [historyDetail, setHistoryDetail] = useState<HistoryMedia | null>(null);
@@ -235,9 +238,6 @@ export default function Home() {
         if (data.status === 'completed' || data.status === 'failed') {
           clearInterval(kickPollTimers.current[jobId]);
           delete kickPollTimers.current[jobId];
-          if (data.status === 'failed') {
-            setError(data.error_message || 'Generation failed');
-          }
         }
       } catch {
         // ignore network errors, will retry next interval
@@ -352,7 +352,15 @@ export default function Home() {
           }
 
           if (updated.status === 'failed') {
-            setError(updated.error_message || 'Generation failed');
+            // Reload history to show the persisted failed media record
+            authFetch('/api/media/history')
+              .then((r) => r.json())
+              .then((d) => setHistoryMedia(d))
+              .catch(() => {});
+            // Auto-remove failed job card after 2s
+            setTimeout(() => {
+              setVideoJobs((prev) => prev.filter((j) => j.job_id !== updated.id));
+            }, 2000);
           }
         }
       )
@@ -405,6 +413,7 @@ export default function Home() {
   };
 
   const loadHistory = async (characterId?: string, mediaType?: string) => {
+    setHistoryLoading(true);
     try {
       const params = new URLSearchParams();
       if (characterId) params.set('character_id', characterId);
@@ -416,6 +425,8 @@ export default function Home() {
       setHistoryMedia(data);
     } catch {
       console.error('Failed to load history');
+    } finally {
+      setHistoryLoading(false);
     }
   };
 
@@ -715,14 +726,12 @@ export default function Home() {
       setTimeout(() => {
         setVideoJobs((prev) => prev.filter(j => j.job_id !== (result.job_id || tempJobId)));
       }, 2000);
-    } catch (err: unknown) {
-      const errMsg = (err instanceof Error ? err.name : '') === 'AbortError'
-        ? t('errorTimeout')
-        : (err instanceof Error ? err.message : String(err));
-      setVideoJobs((prev) => prev.map(j =>
-        j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: errMsg } : j
-      ));
-    } finally {
+      setLoading(false);
+    } catch {
+      // Remove the temp skeleton card
+      setVideoJobs((prev) => prev.filter(j => j.job_id !== tempJobId));
+      // Reload history (now includes the failed media record saved by the API)
+      authFetch('/api/media/history').then(r => r.json()).then(d => setHistoryMedia(d)).catch(() => {});
       setLoading(false);
     }
   };
@@ -773,9 +782,9 @@ export default function Home() {
 
       // Reset form
       setSelectedShotsImage(null);
+      setLoading(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setLoading(false);
     }
   };
@@ -830,13 +839,13 @@ export default function Home() {
       setVideoPrepareResult(result);
       setEditableVideoPrompt(result.video_prompt);
       setGeneratedFirstFrame(result.first_frame_path);
+      setLoading(false);
     } catch (err: unknown) {
       if ((err instanceof Error ? err.name : '') === 'AbortError') {
         setError(t('errorTimeout'));
       } else {
         setError(err instanceof Error ? err.message : String(err));
       }
-    } finally {
       setLoading(false);
     }
   };
@@ -884,9 +893,9 @@ export default function Home() {
       setGeneratedFirstFrame(null);
       setSelectedFirstFrame(null);
       setFirstFrameUploadFile(null);
+      setLoading(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
-    } finally {
       setLoading(false);
     }
   };
@@ -957,11 +966,11 @@ export default function Home() {
       ));
       // Start kick-poll as fallback in case webhook doesn't arrive
       kickPollVideoJob(result.job_id);
+      setLoading(false);
     } catch (err: unknown) {
       setVideoJobs((prev) => prev.map(j =>
         j.job_id === tempJobId ? { ...j, status: 'failed' as const, error_message: (err instanceof Error ? err.message : String(err)) } : j
       ));
-    } finally {
       setLoading(false);
     }
   };
@@ -2655,23 +2664,6 @@ export default function Home() {
           style={{ background: 'var(--bg-primary)' }}
         >
           <div className="p-4 sm:p-6 space-y-6">
-            {/* Error toast */}
-            {error && (
-              <div
-                className="px-4 py-3 rounded-lg flex items-center justify-between animate-fade-in"
-                style={{ background: 'rgba(255,107,107,0.15)', border: '1px solid rgba(255,107,107,0.3)' }}
-              >
-                <span style={{ color: 'var(--error)' }} className="text-sm">{error}</span>
-                <button
-                  onClick={clearError}
-                  className="ml-4 text-sm font-medium hover:opacity-80"
-                  style={{ color: 'var(--error)' }}
-                >
-                  {t('close')}
-                </button>
-              </div>
-            )}
-
             {/* ── History Section ── */}
             <div>
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
@@ -2722,7 +2714,23 @@ export default function Home() {
               </div>
 
               {/* Media grid */}
-              {(() => {
+              {historyLoading ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <div
+                      key={`skeleton-${i}`}
+                      className="rounded-xl overflow-hidden"
+                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                    >
+                      <div className="aspect-square animate-pulse" style={{ background: 'var(--bg-secondary)' }} />
+                      <div className="p-4 space-y-3">
+                        <div className="h-4 rounded animate-pulse" style={{ background: 'var(--bg-secondary)', width: '75%' }} />
+                        <div className="h-3 rounded animate-pulse" style={{ background: 'var(--bg-secondary)', width: '50%' }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (() => {
                 const activeJobs = videoJobs.filter((j) => j.status === 'pending' || j.status === 'processing' || j.status === 'failed');
                 const hasContent = activeJobs.length > 0 || historyMedia.length > 0;
                 return !hasContent;
@@ -2824,117 +2832,165 @@ export default function Home() {
                         </div>
                       );
                     })}
-                  {historyMedia.map((item) => (
-                    <div
-                      key={item.id}
-                      onClick={() => setHistoryDetail(item)}
-                      className="group relative rounded-xl overflow-hidden text-left transition-all hover:scale-[1.02] cursor-pointer"
-                      style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
-                    >
-                      {/* Action buttons (top-right) */}
-                      <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); downloadMedia(item.file_path); }}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                          style={{
-                            background: 'rgba(0,0,0,0.6)',
-                            color: '#fff',
-                            backdropFilter: 'blur(4px)',
-                          }}
-                          title={t('download')}
+                  {historyMedia.map((item) =>
+                    item.status === 'failed' ? (
+                      <div
+                        key={item.id}
+                        className="group relative rounded-xl overflow-hidden text-left"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                      >
+                        {/* Warning icon area */}
+                        <div
+                          className="aspect-square flex items-center justify-center"
+                          style={{ background: 'var(--bg-secondary)' }}
                         >
-                          &#8595;
-                        </button>
-                        <button
-                          onClick={(e) => { e.stopPropagation(); deleteMedia(item.id); }}
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
-                          style={{
-                            background: 'rgba(0,0,0,0.6)',
-                            color: 'var(--error)',
-                            backdropFilter: 'blur(4px)',
-                          }}
-                          title={t('deleteMedia')}
-                        >
-                          &#10005;
-                        </button>
+                          <span className="text-4xl" style={{ color: 'var(--text-muted)' }}>&#9888;</span>
+                        </div>
+                        {/* Info */}
+                        <div className="p-4">
+                          <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                            {item.prompt || item.plan_title || 'Untitled'}
+                          </h3>
+                          {item.error_message && (
+                            <p
+                              className="text-xs mt-1 line-clamp-2"
+                              style={{ color: 'var(--text-secondary)' }}
+                            >
+                              {item.error_message}
+                            </p>
+                          )}
+                          <div className="flex items-center justify-between mt-3">
+                            <p className="text-xs" style={{ color: 'var(--text-muted)' }}>
+                              {new Date(item.created_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </p>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); deleteMedia(item.id); }}
+                              className="text-xs px-2 py-1 rounded hover:opacity-80 transition-opacity"
+                              style={{ color: 'var(--text-muted)' }}
+                              title={t('deleteMedia')}
+                            >
+                              &#10005; {t('deleteMedia')}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      {/* Portfolio toggle (images only) */}
-                      {item.media_type === 'image' && (
-                        <button
-                          onClick={(e) => { e.stopPropagation(); togglePortfolio(item.id, item.is_portfolio); }}
-                          className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
-                          style={{
-                            background: item.is_portfolio ? 'rgba(255,200,0,0.25)' : 'rgba(0,0,0,0.6)',
-                            color: item.is_portfolio ? '#ffc800' : 'rgba(255,255,255,0.4)',
-                            backdropFilter: 'blur(4px)',
-                            textShadow: item.is_portfolio ? '0 0 6px rgba(255,200,0,0.5)' : 'none',
-                          }}
-                          title={item.is_portfolio ? t('removeFromPortfolio') : t('addToPortfolio')}
-                        >
-                          &#9733;
-                        </button>
-                      )}
-                      {/* Media preview */}
-                      <div className="aspect-square overflow-hidden bg-black">
-                        {item.media_type === 'video' ? (
-                          <video
-                            className="w-full h-full object-cover pointer-events-none"
-                            src={`${API}${item.file_path}`}
-                          />
-                        ) : (
-                          <img
-                            src={`${API}${item.file_path}`}
-                            alt={item.prompt || item.plan_title || 'Media'}
-                            className="w-full h-full object-cover"
-                          />
+                    ) : (
+                      <div
+                        key={item.id}
+                        onClick={() => setHistoryDetail(item)}
+                        className="group relative rounded-xl overflow-hidden text-left transition-all hover:scale-[1.02] cursor-pointer"
+                        style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}
+                      >
+                        {/* Action buttons (top-right) */}
+                        <div className="absolute top-2 right-2 z-10 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); downloadMedia(item.file_path); }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                            style={{
+                              background: 'rgba(0,0,0,0.6)',
+                              color: '#fff',
+                              backdropFilter: 'blur(4px)',
+                            }}
+                            title={t('download')}
+                          >
+                            &#8595;
+                          </button>
+                          <button
+                            onClick={(e) => { e.stopPropagation(); deleteMedia(item.id); }}
+                            className="w-8 h-8 rounded-full flex items-center justify-center text-xs"
+                            style={{
+                              background: 'rgba(0,0,0,0.6)',
+                              color: 'var(--error)',
+                              backdropFilter: 'blur(4px)',
+                            }}
+                            title={t('deleteMedia')}
+                          >
+                            &#10005;
+                          </button>
+                        </div>
+                        {/* Portfolio toggle (images only) */}
+                        {item.media_type === 'image' && (
+                          <button
+                            onClick={(e) => { e.stopPropagation(); togglePortfolio(item.id, item.is_portfolio); }}
+                            className="absolute top-2 left-2 z-10 w-8 h-8 rounded-full flex items-center justify-center text-base transition-all"
+                            style={{
+                              background: item.is_portfolio ? 'rgba(255,200,0,0.25)' : 'rgba(0,0,0,0.6)',
+                              color: item.is_portfolio ? '#ffc800' : 'rgba(255,255,255,0.4)',
+                              backdropFilter: 'blur(4px)',
+                              textShadow: item.is_portfolio ? '0 0 6px rgba(255,200,0,0.5)' : 'none',
+                            }}
+                            title={item.is_portfolio ? t('removeFromPortfolio') : t('addToPortfolio')}
+                          >
+                            &#9733;
+                          </button>
                         )}
-                      </div>
-
-                      {/* Info */}
-                      <div className="p-4">
-                        <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
-                          {item.prompt || item.plan_title || 'Untitled'}
-                        </h3>
-                        <div className="flex items-center gap-2 mt-2">
-                          {item.character_image_path && (
+                        {/* Media preview */}
+                        <div className="aspect-square overflow-hidden bg-black">
+                          {item.media_type === 'video' ? (
+                            <video
+                              className="w-full h-full object-cover pointer-events-none"
+                              src={`${API}${item.file_path}`}
+                            />
+                          ) : (
                             <img
-                              src={`${API}${item.character_image_path}`}
-                              alt={item.character_name}
-                              className="w-5 h-5 rounded-full object-cover"
+                              src={`${API}${item.file_path}`}
+                              alt={item.prompt || item.plan_title || 'Media'}
+                              className="w-full h-full object-cover"
                             />
                           )}
-                          <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
-                            {item.character_name}
-                          </span>
                         </div>
-                        <div className="flex items-center gap-2 mt-2">
-                          <span
-                            className="text-xs px-2 py-0.5 rounded-full"
-                            style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
-                          >
-                            {item.media_type === 'video' ? t('video') : t('image')}
-                          </span>
-                          {item.generation_mode && (
+                        {/* Info */}
+                        <div className="p-4">
+                          <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>
+                            {item.prompt || item.plan_title || 'Untitled'}
+                          </h3>
+                          <div className="flex items-center gap-2 mt-2">
+                            {item.character_image_path && (
+                              <img
+                                src={`${API}${item.character_image_path}`}
+                                alt={item.character_name}
+                                className="w-5 h-5 rounded-full object-cover"
+                              />
+                            )}
+                            <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>
+                              {item.character_name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2">
                             <span
                               className="text-xs px-2 py-0.5 rounded-full"
                               style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
                             >
-                              {item.generation_mode}
+                              {item.media_type === 'video' ? t('video') : t('image')}
                             </span>
-                          )}
+                            {item.generation_mode && (
+                              <span
+                                className="text-xs px-2 py-0.5 rounded-full"
+                                style={{ background: 'var(--bg-secondary)', color: 'var(--text-muted)' }}
+                              >
+                                {item.generation_mode}
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
+                            {new Date(item.created_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
+                              year: 'numeric',
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
+                          </p>
                         </div>
-                        <p className="text-xs mt-2" style={{ color: 'var(--text-muted)' }}>
-                          {new Date(item.created_at).toLocaleDateString(locale === 'ko' ? 'ko-KR' : 'en-US', {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               )}
             </div>
