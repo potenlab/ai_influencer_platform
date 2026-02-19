@@ -235,6 +235,9 @@ export default function Home() {
         if (data.status === 'completed' || data.status === 'failed') {
           clearInterval(kickPollTimers.current[jobId]);
           delete kickPollTimers.current[jobId];
+          if (data.status === 'failed') {
+            setError(data.error_message || 'Generation failed');
+          }
         }
       } catch {
         // ignore network errors, will retry next interval
@@ -346,6 +349,10 @@ export default function Home() {
             setTimeout(() => {
               setVideoJobs((prev) => prev.filter((j) => j.job_id !== updated.id));
             }, 2000);
+          }
+
+          if (updated.status === 'failed') {
+            setError(updated.error_message || 'Generation failed');
           }
         }
       )

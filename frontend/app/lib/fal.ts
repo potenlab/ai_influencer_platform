@@ -46,7 +46,11 @@ export async function falPollVideo(
     }
     return { status: 'processing' };
   } catch (err: unknown) {
-    return { status: 'failed', error: (err instanceof Error ? err.message : String(err)) || 'FAL poll error' };
+    // Extract detailed error message from FAL validation errors
+    const falErr = err as { body?: { detail?: Array<{ msg?: string }> } };
+    const detail = falErr?.body?.detail?.[0]?.msg;
+    const message = detail || (err instanceof Error ? err.message : String(err)) || 'FAL poll error';
+    return { status: 'failed', error: message };
   }
 }
 
