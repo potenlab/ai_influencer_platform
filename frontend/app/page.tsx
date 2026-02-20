@@ -186,7 +186,7 @@ export default function Home() {
   };
 
   // Kick-poll for video_final jobs only (triggers backend xAI poll).
-  // State updates come via Realtime, not from this response.
+  // Updates UI state from poll response as reliable fallback for Realtime.
   const kickPollTimers = useRef<Record<string, ReturnType<typeof setInterval>>>({});
 
   const kickPollVideoJob = useCallback((jobId: string) => {
@@ -198,10 +198,36 @@ export default function Home() {
         const res = await authFetch(`/api/jobs/${jobId}`);
         if (!res.ok) return;
         const data = await res.json();
-        // If terminal, stop kicking
+
+        // Update UI state from poll response (reliable fallback for Realtime)
+        setVideoJobs((prev) => {
+          const exists = prev.find((j) => j.job_id === data.id);
+          if (!exists) return prev;
+          return prev.map((j) =>
+            j.job_id === data.id
+              ? {
+                  ...j,
+                  status: data.status,
+                  result_data: data.result_data,
+                  error_message: data.error_message,
+                }
+              : j
+          );
+        });
+
+        // If terminal, stop kicking + refresh history + auto-remove card
         if (data.status === 'completed' || data.status === 'failed') {
           clearInterval(kickPollTimers.current[jobId]);
           delete kickPollTimers.current[jobId];
+          // Reload history to show the new/failed media
+          authFetch('/api/media/history')
+            .then((r) => r.json())
+            .then((d) => setHistoryMedia(d))
+            .catch(() => {});
+          // Auto-remove job card after 2s
+          setTimeout(() => {
+            setVideoJobs((prev) => prev.filter((j) => j.job_id !== data.id));
+          }, 2000);
         }
       } catch {
         // ignore network errors, will retry next interval

@@ -19,6 +19,19 @@ export async function GET(request: NextRequest) {
       .eq('status', 'processing')
       .lt('updated_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
 
+    // Also mark stale pending jobs (never submitted, >1 hour) as failed
+    await supabaseAdmin
+      .from('jobs')
+      .update({
+        status: 'failed',
+        error_message: 'Job timed out (never submitted)',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('user_id', user.id)
+      .eq('status', 'pending')
+      .is('fal_request_id', null)
+      .lt('updated_at', new Date(Date.now() - 60 * 60 * 1000).toISOString());
+
     // Fetch active jobs (pending + processing)
     const { data: jobs, error } = await supabaseAdmin
       .from('jobs')
