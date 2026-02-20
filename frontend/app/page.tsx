@@ -2138,7 +2138,6 @@ export default function Home() {
             autoCloseOnUpload={false}
             autoCloseOnSelect={false}
             images={characterImages}
-            showCharacterIdPhoto={false}
             onSelect={(path) => updateCharacterAvatar(path)}
             selectedImagePath={selectedCharacter?.image_path || null}
             characterTabLabel={t('tabCharacter')}

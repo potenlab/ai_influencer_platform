@@ -20,7 +20,6 @@ export interface FileLibraryProps {
   nullMeansCharacterSelected?: boolean;
 
   character?: Character | null;
-  showCharacterIdPhoto?: boolean;
 
   characterTabLabel?: string;
   uploadedTabLabel?: string;
@@ -42,7 +41,6 @@ export default function FileLibrary({
   selectedImagePath,
   nullMeansCharacterSelected = false,
   character,
-  showCharacterIdPhoto = true,
   characterTabLabel = 'Character',
   uploadedTabLabel = 'Uploaded',
   noCharacterImagesMsg = 'No character images',
@@ -84,10 +82,7 @@ export default function FileLibrary({
 
   /* ── Character tab ── */
   const renderCharacterTab = () => {
-    const hasCharId = showCharacterIdPhoto && character?.image_path;
-    const hasImages = images.length > 0;
-
-    if (!hasCharId && !hasImages) {
+    if (images.length === 0) {
       return (
         <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
           {noCharacterImagesMsg}
@@ -97,32 +92,6 @@ export default function FileLibrary({
 
     return (
       <div className="grid grid-cols-3 gap-2">
-        {/* Character ID photo tile */}
-        {hasCharId && (
-          <div
-            onClick={() => handleSelect(character!.image_path)}
-            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
-            style={{
-              border: isSelected(character!.image_path)
-                ? '2px solid var(--accent)'
-                : '2px solid transparent',
-            }}
-          >
-            <img
-              src={`${apiBase}${character!.image_path}`}
-              alt={character!.name}
-              className="w-full h-full object-cover"
-            />
-            <span
-              className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5"
-              style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}
-            >
-              ID
-            </span>
-          </div>
-        )}
-
-        {/* Image tiles */}
         {images.map((img) => {
           const path = img.file_path;
           if (!path) return null;
