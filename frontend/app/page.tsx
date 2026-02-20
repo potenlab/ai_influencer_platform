@@ -69,6 +69,8 @@ export default function Home() {
   const [characterImages, setCharacterImages] = useState<HistoryMedia[]>([]);
   const [drivingVideoFile, setDrivingVideoFile] = useState<File | null>(null);
   const [selectedMotionImage, setSelectedMotionImage] = useState<string | null>(null);
+  const [motionUploadFile, setMotionUploadFile] = useState<File | null>(null);
+  const [motionUploadPreview, setMotionUploadPreview] = useState<string | null>(null);
 
   // Portfolio / first frame selection states
   const [selectedFirstFrame, setSelectedFirstFrame] = useState<string | null>(null);
@@ -99,6 +101,8 @@ export default function Home() {
   const [spicyVideo, setSpicyVideo] = useState(false);
   const [spicyShots, setSpicyShots] = useState(false);
   const [selectedShotsImage, setSelectedShotsImage] = useState<string | null>(null);
+  const [shotsUploadFile, setShotsUploadFile] = useState<File | null>(null);
+  const [shotsUploadPreview, setShotsUploadPreview] = useState<string | null>(null);
 
   // i18n
   const [locale, setLocale] = useState<Locale>('ko');
@@ -353,6 +357,28 @@ export default function Home() {
       setFirstFrameUploadPreview(null);
     }
   }, [firstFrameUploadFile]);
+
+  // Preview motion upload
+  useEffect(() => {
+    if (motionUploadFile) {
+      const url = URL.createObjectURL(motionUploadFile);
+      setMotionUploadPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setMotionUploadPreview(null);
+    }
+  }, [motionUploadFile]);
+
+  // Preview shots upload
+  useEffect(() => {
+    if (shotsUploadFile) {
+      const url = URL.createObjectURL(shotsUploadFile);
+      setShotsUploadPreview(url);
+      return () => URL.revokeObjectURL(url);
+    } else {
+      setShotsUploadPreview(null);
+    }
+  }, [shotsUploadFile]);
 
   // Auto-scroll right panel on new history items
   useEffect(() => {
@@ -662,18 +688,37 @@ export default function Home() {
 
   const generateShots = async () => {
     const sourceImage = selectedShotsImage;
-    if (!selectedCharacter || !sourceImage) return;
+    const capturedShotsUploadFile = shotsUploadFile;
+    if (!selectedCharacter || (!sourceImage && !capturedShotsUploadFile)) return;
     clearError();
     setLoading(true);
 
     try {
+      // Upload shots image file if provided
+      let resolvedSourceImage = sourceImage;
+      if (capturedShotsUploadFile) {
+        const formData = new FormData();
+        formData.append('file', capturedShotsUploadFile);
+        const uploadRes = await authFetch(`${API}/api/upload/image`, {
+          method: 'POST',
+          body: formData,
+        });
+        if (!uploadRes.ok) {
+          throw new Error(await safeErrorJson(uploadRes));
+        }
+        const uploadResult = await uploadRes.json();
+        resolvedSourceImage = uploadResult.web_path;
+      }
+
+      if (!resolvedSourceImage) return;
+
       // Step 1: Create 5 jobs via /api/generate/shots
       const res = await authFetch(`${API}/api/generate/shots`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           character_id: selectedCharacter.id,
-          source_image_path: sourceImage,
+          source_image_path: resolvedSourceImage,
           spicy: spicyShots,
         }),
       });
@@ -706,6 +751,7 @@ export default function Home() {
 
       // Reset form
       setSelectedShotsImage(null);
+      setShotsUploadFile(null);
       setLoading(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
@@ -844,9 +890,12 @@ export default function Home() {
     }]);
     setMobileTab('history');
     // Reset form immediately so user can start another
+    const capturedMotionUploadFile = motionUploadFile;
+    const capturedMotionImage = selectedMotionImage;
     setPrompt('');
     setDrivingVideoFile(null);
     setSelectedMotionImage(null);
+    setMotionUploadFile(null);
     if (videoInputRef.current) videoInputRef.current.value = '';
     setGeneratedFirstFrame(null);
 
@@ -866,6 +915,22 @@ export default function Home() {
 
       const uploadResult = await uploadRes.json();
 
+      // Step 1b: Upload motion image file if provided
+      let motionImagePath = capturedMotionImage || undefined;
+      if (capturedMotionUploadFile) {
+        const imgFormData = new FormData();
+        imgFormData.append('file', capturedMotionUploadFile);
+        const imgUploadRes = await authFetch(`${API}/api/upload/image`, {
+          method: 'POST',
+          body: imgFormData,
+        });
+        if (!imgUploadRes.ok) {
+          throw new Error(await safeErrorJson(imgUploadRes));
+        }
+        const imgUploadResult = await imgUploadRes.json();
+        motionImagePath = imgUploadResult.web_path;
+      }
+
       // Step 2: Submit to async queue
       const res = await authFetch(`/api/generate/video/motion`, {
         method: 'POST',
@@ -874,7 +939,7 @@ export default function Home() {
           character_id: selectedCharacter.id,
           prompt: prompt.trim(),
           driving_video_url: uploadResult.web_path,
-          image_path: selectedMotionImage || undefined,
+          image_path: motionImagePath,
           spicy: spicyVideo,
         }),
       });
@@ -936,10 +1001,12 @@ export default function Home() {
     setSelectedFirstFrame(null);
     setFirstFrameUploadFile(null);
     setSelectedMotionImage(null);
+    setMotionUploadFile(null);
     setSelectedReferenceImageUrl(null);
     setShowFirstFramePicker(false);
     setShowMotionImagePicker(false);
     setShowShotsImagePicker(false);
+    setShotsUploadFile(null);
   };
 
   const pillStyle = (active: boolean) => ({
@@ -1327,7 +1394,13 @@ export default function Home() {
                           onClick={() => setShowShotsImagePicker(true)}
                         >
                           {/* Thumbnail or placeholder */}
-                          {selectedShotsImage ? (
+                          {shotsUploadPreview ? (
+                            <img
+                              src={shotsUploadPreview}
+                              alt="Source"
+                              className="w-10 h-10 rounded-lg object-cover shrink-0"
+                            />
+                          ) : selectedShotsImage ? (
                             <img
                               src={`${API}${selectedShotsImage}`}
                               alt="Source"
@@ -1347,16 +1420,17 @@ export default function Home() {
                           )}
 
                           {/* Label */}
-                          <span className="flex-1 text-xs truncate" style={{ color: selectedShotsImage ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                            {selectedShotsImage ? t('sourceImageSelected') : t('tapToSelectSourceImage')}
+                          <span className="flex-1 text-xs truncate" style={{ color: (shotsUploadPreview || selectedShotsImage) ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                            {(shotsUploadPreview || selectedShotsImage) ? t('sourceImageSelected') : t('tapToSelectSourceImage')}
                           </span>
 
                           {/* Remove or chevron */}
-                          {selectedShotsImage ? (
+                          {(shotsUploadFile || selectedShotsImage) ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setSelectedShotsImage(null);
+                                setShotsUploadFile(null);
                               }}
                               className="w-6 h-6 flex items-center justify-center rounded-full shrink-0"
                               style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}
@@ -1391,7 +1465,7 @@ export default function Home() {
                         {/* Generate Shots button */}
                         <button
                           onClick={generateShots}
-                          disabled={loading || !selectedShotsImage}
+                          disabled={loading || (!selectedShotsImage && !shotsUploadFile)}
                           className="w-full py-3 rounded-lg text-sm font-semibold transition-all disabled:opacity-40 glow-pulse flex items-center justify-center gap-2"
                           style={{ background: 'var(--accent)', color: '#fff' }}
                         >
@@ -1655,7 +1729,13 @@ export default function Home() {
                           onClick={() => setShowMotionImagePicker(true)}
                         >
                           {/* Thumbnail or placeholder */}
-                          {selectedMotionImage || selectedCharacter?.image_path ? (
+                          {motionUploadPreview ? (
+                            <img
+                              src={motionUploadPreview}
+                              alt="Motion image"
+                              className="w-10 h-10 rounded-lg object-cover shrink-0"
+                            />
+                          ) : selectedMotionImage || selectedCharacter?.image_path ? (
                             <img
                               src={`${API}${selectedMotionImage || selectedCharacter?.image_path}`}
                               alt="Motion image"
@@ -1675,14 +1755,28 @@ export default function Home() {
                           )}
 
                           {/* Label */}
-                          <span className="flex-1 text-xs truncate" style={{ color: 'var(--text-primary)' }}>
-                            {t('motionImageSelected')}
+                          <span className="flex-1 text-xs truncate" style={{ color: (motionUploadPreview || selectedMotionImage) ? 'var(--text-primary)' : 'var(--text-muted)' }}>
+                            {(motionUploadPreview || selectedMotionImage) ? t('motionImageSelected') : t('tapToSelectMotionImage')}
                           </span>
 
-                          {/* Chevron */}
-                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
-                            <polyline points="9 18 15 12 9 6"/>
-                          </svg>
+                          {/* Remove or chevron */}
+                          {(motionUploadFile || selectedMotionImage) ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setMotionUploadFile(null);
+                                setSelectedMotionImage(null);
+                              }}
+                              className="w-6 h-6 flex items-center justify-center rounded-full shrink-0"
+                              style={{ background: 'var(--bg-card)', color: 'var(--text-muted)' }}
+                            >
+                              &times;
+                            </button>
+                          ) : (
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+                              <polyline points="9 18 15 12 9 6"/>
+                            </svg>
+                          )}
                         </div>
 
                         {/* Video file upload */}
@@ -2100,8 +2194,16 @@ export default function Home() {
             onClose={() => setShowMotionImagePicker(false)}
             title={t('selectMotionImage')}
             apiBase={API}
+            onUpload={(file) => {
+              setMotionUploadFile(file);
+              setSelectedMotionImage(null);
+            }}
+            uploadLabel={t('uploadNewImage')}
             images={characterImages}
-            onSelect={(path) => setSelectedMotionImage(path)}
+            onSelect={(path) => {
+              setSelectedMotionImage(path);
+              setMotionUploadFile(null);
+            }}
             selectedImagePath={selectedMotionImage}
             nullMeansCharacterSelected
             character={selectedCharacter}
@@ -2117,8 +2219,16 @@ export default function Home() {
             onClose={() => setShowShotsImagePicker(false)}
             title={t('selectSourceImage')}
             apiBase={API}
+            onUpload={(file) => {
+              setShotsUploadFile(file);
+              setSelectedShotsImage(null);
+            }}
+            uploadLabel={t('uploadNewImage')}
             images={characterImages}
-            onSelect={(path) => setSelectedShotsImage(path)}
+            onSelect={(path) => {
+              setSelectedShotsImage(path);
+              setShotsUploadFile(null);
+            }}
             selectedImagePath={selectedShotsImage}
             character={selectedCharacter}
             characterTabLabel={t('tabCharacter')}

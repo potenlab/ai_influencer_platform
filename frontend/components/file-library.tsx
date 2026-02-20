@@ -82,7 +82,14 @@ export default function FileLibrary({
 
   /* ── Character tab ── */
   const renderCharacterTab = () => {
-    if (images.length === 0) {
+    const charIdPath = character?.image_path;
+    const hasCharId = !!charIdPath;
+    // Filter out images whose file_path matches the character ID photo to avoid duplication
+    const filteredImages = hasCharId
+      ? images.filter((img) => img.file_path !== charIdPath)
+      : images;
+
+    if (!hasCharId && filteredImages.length === 0) {
       return (
         <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
           {noCharacterImagesMsg}
@@ -92,7 +99,32 @@ export default function FileLibrary({
 
     return (
       <div className="grid grid-cols-3 gap-2">
-        {images.map((img) => {
+        {/* Character ID photo tile — always first */}
+        {hasCharId && (
+          <div
+            onClick={() => handleSelect(charIdPath)}
+            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
+            style={{
+              border: isSelected(charIdPath)
+                ? '2px solid var(--accent)'
+                : '2px solid transparent',
+            }}
+          >
+            <img
+              src={`${apiBase}${charIdPath}`}
+              alt={character!.name}
+              className="w-full h-full object-cover"
+            />
+            <span
+              className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5"
+              style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}
+            >
+              ID
+            </span>
+          </div>
+        )}
+
+        {filteredImages.map((img) => {
           const path = img.file_path;
           if (!path) return null;
           return (
