@@ -4,49 +4,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import translations, { type Locale } from './translations';
 import { supabase } from './supabaseClient';
+import type { Character, HistoryMedia } from './types';
+import FileLibrary from '@/components/file-library';
 
 // API routes are now same-origin Next.js routes
 const API = '';
-
-interface Character {
-  id: string;
-  name: string;
-  content_style: string;
-  personality_traits: string[];
-  tone_of_voice: string;
-  target_audience: string;
-  content_themes: string[];
-  visual_description: string;
-  image_path: string;
-}
-
-interface HistoryMedia {
-  id: number;
-  plan_id: string | null;
-  media_type: string;
-  file_path: string;
-  created_at: string;
-  character_id: string;
-  character_name: string;
-  character_image_path: string;
-  // v2 fields
-  generation_mode: string | null;
-  prompt: string | null;
-  video_prompt: string | null;
-  first_frame_path: string | null;
-  reference_image_path: string | null;
-  is_portfolio: boolean;
-  status: 'completed' | 'failed';
-  error_message: string | null;
-  // legacy plan fields
-  plan_title: string | null;
-  plan_theme: string | null;
-  hook: string | null;
-  plan_first_frame_prompt: string | null;
-  plan_video_prompt: string | null;
-  call_to_action: string | null;
-  duration_seconds: number | null;
-}
 
 type GenerationMode = 'image' | 'video';
 type ImageOption = 'ref_image' | 'text_only' | 'shots';
@@ -104,12 +66,11 @@ export default function Home() {
   const [referenceImagePreview, setReferenceImagePreview] = useState<string | null>(null);
   const [showRefImagePicker, setShowRefImagePicker] = useState(false);
   const [selectedReferenceImageUrl, setSelectedReferenceImageUrl] = useState<string | null>(null);
-  const [referenceImages, setReferenceImages] = useState<HistoryMedia[]>([]);
+  const [characterImages, setCharacterImages] = useState<HistoryMedia[]>([]);
   const [drivingVideoFile, setDrivingVideoFile] = useState<File | null>(null);
   const [selectedMotionImage, setSelectedMotionImage] = useState<string | null>(null);
 
   // Portfolio / first frame selection states
-  const [portfolioImages, setPortfolioImages] = useState<HistoryMedia[]>([]);
   const [selectedFirstFrame, setSelectedFirstFrame] = useState<string | null>(null);
   const [firstFrameUploadFile, setFirstFrameUploadFile] = useState<File | null>(null);
   const [firstFrameUploadPreview, setFirstFrameUploadPreview] = useState<string | null>(null);
@@ -117,7 +78,6 @@ export default function Home() {
   const [showMotionImagePicker, setShowMotionImagePicker] = useState(false);
   const [showShotsImagePicker, setShowShotsImagePicker] = useState(false);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
-  const [avatarImages, setAvatarImages] = useState<HistoryMedia[]>([]);
 
   // Video prepare states
   const [videoPrepareResult, setVideoPrepareResult] = useState<VideoPrepareResult | null>(null);
@@ -430,22 +390,7 @@ export default function Home() {
     }
   };
 
-  const loadPortfolioImages = async (characterId: string) => {
-    try {
-      const params = new URLSearchParams({
-        character_id: characterId,
-        media_type: 'image',
-        is_portfolio: 'true',
-      });
-      const res = await authFetch(`${API}/api/media/history?${params.toString()}`);
-      const data = await res.json();
-      setPortfolioImages(data);
-    } catch {
-      console.error('Failed to load portfolio images');
-    }
-  };
-
-  const loadAvatarImages = async (characterId: string) => {
+  const loadCharacterImages = async (characterId: string) => {
     try {
       const params = new URLSearchParams({
         character_id: characterId,
@@ -453,30 +398,9 @@ export default function Home() {
       });
       const res = await authFetch(`${API}/api/media/history?${params.toString()}`);
       const data = await res.json();
-      setAvatarImages(data);
+      setCharacterImages(data);
     } catch {
-      console.error('Failed to load avatar images');
-    }
-  };
-
-  const loadReferenceImages = async (characterId: string) => {
-    try {
-      const params = new URLSearchParams({
-        character_id: characterId,
-        has_reference_image: 'true',
-      });
-      const res = await authFetch(`${API}/api/media/history?${params.toString()}`);
-      const data: HistoryMedia[] = await res.json();
-      // Deduplicate by reference_image_path
-      const seen = new Set<string>();
-      const unique = data.filter((item) => {
-        if (!item.reference_image_path || seen.has(item.reference_image_path)) return false;
-        seen.add(item.reference_image_path);
-        return true;
-      });
-      setReferenceImages(unique);
-    } catch {
-      console.error('Failed to load reference images');
+      console.error('Failed to load character images');
     }
   };
 
@@ -1002,8 +926,7 @@ export default function Home() {
     setShowMotionImagePicker(false);
     setShowShotsImagePicker(false);
     setShowAvatarPicker(false);
-    loadPortfolioImages(char.id);
-    loadReferenceImages(char.id);
+    loadCharacterImages(char.id);
   };
 
   const resetGenerate = () => {
@@ -1156,7 +1079,7 @@ export default function Home() {
                       </div>
                     )}
                     <button
-                      onClick={(e) => { e.stopPropagation(); loadAvatarImages(selectedCharacter.id); setShowAvatarPicker(true); }}
+                      onClick={(e) => { e.stopPropagation(); setShowAvatarPicker(true); }}
                       className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center"
                       style={{ background: 'var(--accent)', color: '#fff', border: '2px solid var(--bg-card)' }}
                       title="Edit avatar"
@@ -1225,7 +1148,7 @@ export default function Home() {
                       </span>
                       <div className="grid grid-cols-3 gap-2">
                         <button
-                          onClick={() => { setImageOption('ref_image'); if (selectedCharacter) loadReferenceImages(selectedCharacter.id); }}
+                          onClick={() => setImageOption('ref_image')}
                           className="flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-xl text-xs font-medium transition-all"
                           style={optionCardStyle(imageOption === 'ref_image')}
                         >
@@ -1249,7 +1172,7 @@ export default function Home() {
                           {t('textOnly')}
                         </button>
                         <button
-                          onClick={() => { setImageOption('shots'); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
+                          onClick={() => setImageOption('shots')}
                           className="flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-xl text-xs font-medium transition-all"
                           style={optionCardStyle(imageOption === 'shots')}
                         >
@@ -1493,7 +1416,7 @@ export default function Home() {
                       </span>
                       <div className="grid grid-cols-2 gap-2">
                         <button
-                          onClick={() => { setVideoOption('select_image'); resetGenerate(); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
+                          onClick={() => { setVideoOption('select_image'); resetGenerate(); }}
                           className="flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-xl text-xs font-medium transition-all"
                           style={optionCardStyle(videoOption === 'select_image')}
                         >
@@ -1510,7 +1433,7 @@ export default function Home() {
                           {t('refImageToVideo')}
                         </button>
                         <button
-                          onClick={() => { setVideoOption('motion_control'); resetGenerate(); if (selectedCharacter) loadPortfolioImages(selectedCharacter.id); }}
+                          onClick={() => { setVideoOption('motion_control'); resetGenerate(); }}
                           className="flex flex-col items-center justify-center gap-2 py-4 px-2 rounded-xl text-xs font-medium transition-all"
                           style={optionCardStyle(videoOption === 'motion_control')}
                         >
@@ -2121,501 +2044,108 @@ export default function Home() {
             </>
           )}
 
-          {/* Reference Image Picker side panel */}
-          {showRefImagePicker && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-20 lg:bg-transparent"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onClick={() => setShowRefImagePicker(false)}
-              />
+          {/* Reference Image Picker */}
+          <FileLibrary
+            open={showRefImagePicker}
+            onClose={() => setShowRefImagePicker(false)}
+            title={t('selectRefImage')}
+            apiBase={API}
+            onUpload={(file) => {
+              setReferenceImageFile(file);
+              setSelectedReferenceImageUrl(null);
+            }}
+            uploadLabel={t('uploadNewImage')}
+            images={characterImages}
+            onSelect={(path) => {
+              setSelectedReferenceImageUrl(path);
+              setReferenceImageFile(null);
+              if (imageInputRef.current) imageInputRef.current.value = '';
+            }}
+            selectedImagePath={selectedReferenceImageUrl}
+            character={selectedCharacter}
+            characterTabLabel={t('tabCharacter')}
+            uploadedTabLabel={t('tabUploaded')}
+            noCharacterImagesMsg={t('noCharacterImages')}
+            noUploadedImagesMsg={t('noUploadedImages')}
+          />
 
-              {/* Panel */}
-              <div
-                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t('selectRefImage')}
-                  </h3>
-                  <button
-                    onClick={() => setShowRefImagePicker(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    &times;
-                  </button>
-                </div>
+          {/* First Frame Picker */}
+          <FileLibrary
+            open={showFirstFramePicker}
+            onClose={() => setShowFirstFramePicker(false)}
+            title={t('selectFirstFrame')}
+            apiBase={API}
+            onUpload={(file) => {
+              setFirstFrameUploadFile(file);
+              setSelectedFirstFrame(null);
+            }}
+            uploadLabel={t('uploadNewImage')}
+            images={characterImages}
+            onSelect={(path) => {
+              setSelectedFirstFrame(path);
+              setFirstFrameUploadFile(null);
+              if (firstFrameInputRef.current) firstFrameInputRef.current.value = '';
+            }}
+            selectedImagePath={selectedFirstFrame}
+            character={selectedCharacter}
+            characterTabLabel={t('tabCharacter')}
+            uploadedTabLabel={t('tabUploaded')}
+            noCharacterImagesMsg={t('noCharacterImages')}
+            noUploadedImagesMsg={t('noUploadedImages')}
+          />
 
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Upload new button */}
-                  <label
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm font-medium transition-all"
-                    style={{ background: 'var(--bg-card)', border: '2px dashed var(--border)', color: 'var(--text-secondary)' }}
-                  >
-                    <input
-                      ref={imageInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setReferenceImageFile(file);
-                          setSelectedReferenceImageUrl(null);
-                          setShowRefImagePicker(false);
-                        }
-                      }}
-                    />
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    {t('uploadNewImage')}
-                  </label>
+          {/* Motion Image Picker */}
+          <FileLibrary
+            open={showMotionImagePicker}
+            onClose={() => setShowMotionImagePicker(false)}
+            title={t('selectMotionImage')}
+            apiBase={API}
+            images={characterImages}
+            onSelect={(path) => setSelectedMotionImage(path)}
+            selectedImagePath={selectedMotionImage}
+            nullMeansCharacterSelected
+            character={selectedCharacter}
+            characterTabLabel={t('tabCharacter')}
+            uploadedTabLabel={t('tabUploaded')}
+            noCharacterImagesMsg={t('noCharacterImages')}
+            noUploadedImagesMsg={t('noUploadedImages')}
+          />
 
-                  {/* Previously used reference images */}
-                  <div>
-                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                      {t('previousRefImages')}
-                    </span>
-                    {referenceImages.length === 0 ? (
-                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
-                        {t('noRefImages')}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {referenceImages.map((img) => (
-                          <div
-                            key={img.id}
-                            onClick={() => {
-                              setSelectedReferenceImageUrl(img.reference_image_path);
-                              setReferenceImageFile(null);
-                              if (imageInputRef.current) imageInputRef.current.value = '';
-                              setShowRefImagePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
-                            style={{
-                              border: selectedReferenceImageUrl === img.reference_image_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${img.reference_image_path}`}
-                              alt="Reference"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+          {/* Shots Image Picker */}
+          <FileLibrary
+            open={showShotsImagePicker}
+            onClose={() => setShowShotsImagePicker(false)}
+            title={t('selectSourceImage')}
+            apiBase={API}
+            images={characterImages}
+            onSelect={(path) => setSelectedShotsImage(path)}
+            selectedImagePath={selectedShotsImage}
+            character={selectedCharacter}
+            characterTabLabel={t('tabCharacter')}
+            uploadedTabLabel={t('tabUploaded')}
+            noCharacterImagesMsg={t('noCharacterImages')}
+            noUploadedImagesMsg={t('noUploadedImages')}
+          />
 
-          {/* First Frame Picker side panel */}
-          {showFirstFramePicker && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-20 lg:bg-transparent"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onClick={() => setShowFirstFramePicker(false)}
-              />
-
-              {/* Panel */}
-              <div
-                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t('selectFirstFrame')}
-                  </h3>
-                  <button
-                    onClick={() => setShowFirstFramePicker(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Upload new button */}
-                  <label
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm font-medium transition-all"
-                    style={{ background: 'var(--bg-card)', border: '2px dashed var(--border)', color: 'var(--text-secondary)' }}
-                  >
-                    <input
-                      ref={firstFrameInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          setFirstFrameUploadFile(file);
-                          setSelectedFirstFrame(null);
-                          setShowFirstFramePicker(false);
-                        }
-                      }}
-                    />
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    {t('uploadNewImage')}
-                  </label>
-
-                  {/* Portfolio images grid */}
-                  <div>
-                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                      {t('portfolioImages')}
-                    </span>
-                    {!selectedCharacter?.image_path && portfolioImages.length === 0 ? (
-                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
-                        {t('noPortfolioImagesShort')}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {/* Character ID photo */}
-                        {selectedCharacter?.image_path && (
-                          <div
-                            onClick={() => {
-                              setSelectedFirstFrame(selectedCharacter.image_path);
-                              setFirstFrameUploadFile(null);
-                              if (firstFrameInputRef.current) firstFrameInputRef.current.value = '';
-                              setShowFirstFramePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
-                            style={{
-                              border: selectedFirstFrame === selectedCharacter.image_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${selectedCharacter.image_path}`}
-                              alt={selectedCharacter.name}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
-                          </div>
-                        )}
-                        {portfolioImages.map((img) => (
-                          <div
-                            key={img.id}
-                            onClick={() => {
-                              setSelectedFirstFrame(img.file_path);
-                              setFirstFrameUploadFile(null);
-                              if (firstFrameInputRef.current) firstFrameInputRef.current.value = '';
-                              setShowFirstFramePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
-                            style={{
-                              border: selectedFirstFrame === img.file_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${img.file_path}`}
-                              alt={img.prompt || 'Portfolio'}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Motion Image Picker side panel */}
-          {showMotionImagePicker && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-20 lg:bg-transparent"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onClick={() => setShowMotionImagePicker(false)}
-              />
-
-              {/* Panel */}
-              <div
-                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t('selectMotionImage')}
-                  </h3>
-                  <button
-                    onClick={() => setShowMotionImagePicker(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  <div>
-                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                      {t('portfolioImages')}
-                    </span>
-                    {!selectedCharacter?.image_path && portfolioImages.length === 0 ? (
-                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
-                        {t('noPortfolioImagesShort')}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {/* Character ID photo */}
-                        {selectedCharacter?.image_path && (
-                          <div
-                            onClick={() => {
-                              setSelectedMotionImage(selectedCharacter.image_path);
-                              setShowMotionImagePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
-                            style={{
-                              border: (selectedMotionImage === selectedCharacter.image_path || (!selectedMotionImage))
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${selectedCharacter.image_path}`}
-                              alt={selectedCharacter.name}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
-                          </div>
-                        )}
-                        {portfolioImages.map((img) => (
-                          <div
-                            key={img.id}
-                            onClick={() => {
-                              setSelectedMotionImage(img.file_path);
-                              setShowMotionImagePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
-                            style={{
-                              border: selectedMotionImage === img.file_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${img.file_path}`}
-                              alt={img.prompt || 'Portfolio'}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Shots Image Picker side panel */}
-          {showShotsImagePicker && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-20 lg:bg-transparent"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onClick={() => setShowShotsImagePicker(false)}
-              />
-
-              {/* Panel */}
-              <div
-                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t('selectSourceImage')}
-                  </h3>
-                  <button
-                    onClick={() => setShowShotsImagePicker(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  <div>
-                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                      {t('portfolioImages')}
-                    </span>
-                    {!selectedCharacter?.image_path && portfolioImages.length === 0 ? (
-                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
-                        {t('noPortfolioImagesShort')}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {/* Character ID photo */}
-                        {selectedCharacter?.image_path && (
-                          <div
-                            onClick={() => {
-                              setSelectedShotsImage(selectedCharacter.image_path);
-                              setShowShotsImagePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all relative"
-                            style={{
-                              border: selectedShotsImage === selectedCharacter.image_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${selectedCharacter.image_path}`}
-                              alt={selectedCharacter.name}
-                              className="w-full h-full object-cover"
-                            />
-                            <span className="absolute bottom-0 left-0 right-0 text-center text-[10px] py-0.5" style={{ background: 'rgba(0,0,0,0.6)', color: 'var(--text-muted)' }}>ID</span>
-                          </div>
-                        )}
-                        {portfolioImages.map((img) => (
-                          <div
-                            key={img.id}
-                            onClick={() => {
-                              setSelectedShotsImage(img.file_path);
-                              setShowShotsImagePicker(false);
-                            }}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
-                            style={{
-                              border: selectedShotsImage === img.file_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${img.file_path}`}
-                              alt={img.prompt || 'Portfolio'}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* Avatar Picker side panel */}
-          {showAvatarPicker && (
-            <>
-              {/* Backdrop */}
-              <div
-                className="fixed inset-0 z-20 lg:bg-transparent"
-                style={{ background: 'rgba(0,0,0,0.5)' }}
-                onClick={() => setShowAvatarPicker(false)}
-              />
-
-              {/* Panel */}
-              <div
-                className="z-30 flex flex-col fixed bottom-0 left-0 right-0 max-h-[85vh] rounded-t-2xl lg:top-0 lg:left-[440px] lg:bottom-0 lg:right-auto lg:w-[360px] lg:max-h-none lg:rounded-t-none lg:rounded-r-2xl"
-                style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', boxShadow: '0 -4px 24px rgba(0,0,0,0.2)' }}
-              >
-                {/* Header */}
-                <div className="flex items-center justify-between px-4 py-3 border-b shrink-0" style={{ borderColor: 'var(--border)' }}>
-                  <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
-                    {t('changeAvatar')}
-                  </h3>
-                  <button
-                    onClick={() => setShowAvatarPicker(false)}
-                    className="w-8 h-8 flex items-center justify-center rounded-full text-lg"
-                    style={{ color: 'var(--text-muted)' }}
-                  >
-                    &times;
-                  </button>
-                </div>
-
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                  {/* Upload new button */}
-                  <label
-                    className="flex items-center justify-center gap-2 w-full py-3 rounded-xl cursor-pointer text-sm font-medium transition-all"
-                    style={{ background: 'var(--bg-card)', border: '2px dashed var(--border)', color: 'var(--text-secondary)' }}
-                  >
-                    <input
-                      ref={editAvatarInputRef}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="sr-only"
-                      onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) updateCharacterAvatar(file);
-                      }}
-                    />
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    {t('uploadNewImage')}
-                  </label>
-
-                  {/* Character images grid */}
-                  <div>
-                    <span className="text-xs font-medium block mb-2" style={{ color: 'var(--text-muted)' }}>
-                      {selectedCharacter?.name}
-                    </span>
-                    {avatarImages.length === 0 ? (
-                      <p className="text-xs text-center py-6" style={{ color: 'var(--text-muted)' }}>
-                        {t('noPortfolioImagesShort')}
-                      </p>
-                    ) : (
-                      <div className="grid grid-cols-3 gap-2">
-                        {avatarImages.map((img) => (
-                          <div
-                            key={img.id}
-                            onClick={() => updateCharacterAvatar(img.file_path)}
-                            className="aspect-square rounded-lg overflow-hidden cursor-pointer transition-all"
-                            style={{
-                              border: selectedCharacter?.image_path === img.file_path
-                                ? '2px solid var(--accent)'
-                                : '2px solid transparent',
-                            }}
-                          >
-                            <img
-                              src={`${API}${img.file_path}`}
-                              alt={img.prompt || 'Generated'}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+          {/* Avatar Picker */}
+          <FileLibrary
+            open={showAvatarPicker}
+            onClose={() => setShowAvatarPicker(false)}
+            title={t('changeAvatar')}
+            apiBase={API}
+            onUpload={(file) => updateCharacterAvatar(file)}
+            uploadLabel={t('uploadNewImage')}
+            autoCloseOnUpload={false}
+            autoCloseOnSelect={false}
+            images={characterImages}
+            showCharacterIdPhoto={false}
+            onSelect={(path) => updateCharacterAvatar(path)}
+            selectedImagePath={selectedCharacter?.image_path || null}
+            characterTabLabel={t('tabCharacter')}
+            uploadedTabLabel={t('tabUploaded')}
+            noCharacterImagesMsg={t('noCharacterImages')}
+            noUploadedImagesMsg={t('noUploadedImages')}
+          />
 
           {/* Bottom tab bar — Image/Video mode selector */}
           {selectedCharacter && (

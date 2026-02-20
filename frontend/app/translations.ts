@@ -166,6 +166,10 @@ const translations: Record<Locale, Record<string, string>> = {
     tapToSelectSourceImage: '탭하여 소스 이미지 선택',
     sourceImageSelected: '소스 이미지 선택됨',
     changeAvatar: '프로필 사진 변경',
+    tabCharacter: '캐릭터',
+    tabUploaded: '업로드',
+    noCharacterImages: '캐릭터 이미지가 없습니다',
+    noUploadedImages: '업로드된 이미지가 없습니다',
   },
 
   en: {
@@ -333,6 +337,10 @@ const translations: Record<Locale, Record<string, string>> = {
     tapToSelectSourceImage: 'Tap to select source image',
     sourceImageSelected: 'Source image selected',
     changeAvatar: 'Change Avatar',
+    tabCharacter: 'Character',
+    tabUploaded: 'Uploaded',
+    noCharacterImages: 'No character images',
+    noUploadedImages: 'No uploaded images',
   },
 };
 
