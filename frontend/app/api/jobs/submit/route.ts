@@ -65,7 +65,6 @@ export async function POST(request: Request) {
           prompt: video_prompt,
           image_url: first_frame_path,
           duration: Math.min(duration, 15),
-          aspect_ratio: '9:16',
           resolution: '720p',
         };
       } else {

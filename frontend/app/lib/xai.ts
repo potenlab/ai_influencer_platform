@@ -61,11 +61,13 @@ export async function xaiSubmitVideo(
     model: 'grok-imagine-video',
     prompt,
     duration: Math.min(duration, 15),
-    aspect_ratio: '9:16',
     resolution: '720p',
   };
   if (imageUrl) {
     body.image = { url: imageUrl };
+    // Omit aspect_ratio so xAI auto-detects from the input image
+  } else {
+    body.aspect_ratio = '9:16';
   }
 
   const res = await fetch('https://api.x.ai/v1/videos/generations', {
